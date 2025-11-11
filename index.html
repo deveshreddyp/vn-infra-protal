@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="style.css">
     
     <style>
+        /* (All the <style> code is identical to the local version) */
         body {
             display: flex;
             align-items: center;
@@ -55,7 +56,7 @@
         }
         .about-app-link {
             display: inline-block;
-            margin-top: 2rem;
+            margin-top: 1rem;
             font-size: 1rem;
             font-weight: 600;
             color: var(--primary-blue);
@@ -68,8 +69,9 @@
         }
 
         /* --- Styles for Modal (Pop-up) --- */
-        .modal-backdrop {
-            display: none; position: fixed;
+        .modal-backdrop, .modal-content {
+            display: none; /* Hide all modal parts by default */
+            position: fixed;
             top: 0; left: 0;
             width: 100%; height: 100%;
             background-color: rgba(0, 0, 0, 0.6);
@@ -77,17 +79,15 @@
             transition: opacity 0.3s ease;
         }
         .modal-content {
-            display: none; position: fixed;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
             background-color: var(--light-color);
             padding: 2.5rem; border-radius: 12px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            width: 90%; max-width: 600px;
-            z-index: 2001; opacity: 0;
+            width: 90%; max-width: 650px; /* Made modal wider */
+            z-index: 2001; 
             transform: translate(-50%, -45%);
             transition: all 0.3s ease;
             text-align: left;
+            top: 50%; left: 50%;
         }
         .modal-close {
             position: absolute; top: 10px; right: 20px;
@@ -95,124 +95,90 @@
             color: #aaa; cursor: pointer;
         }
         .modal-close:hover { color: var(--dark-color); }
-        .modal-content h2 { color: var(--primary-blue); margin-bottom: 1rem; border: none; text-align: left; }
+        .modal-content h2 { color: var(--primary-blue); margin-bottom: 1.5rem; border: none; text-align: left; }
         .modal-content p { margin-bottom: 0.5rem; line-height: 1.7; text-align: left; color: #555; font-size: 1rem; }
         .modal-content ul { margin-left: 20px; margin-bottom: 1rem; text-align: left; }
-        body.modal-open .modal-backdrop { display: block; opacity: 1; }
-        body.modal-open .modal-content { display: block; opacity: 1; transform: translate(-50%, -50%); }
+
+        /* --- NEW: Styles for Contact Modal --- */
+        .team-container {
+            display: flex;
+            flex-direction: column; /* Single column layout */
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        .team-member {
+            background-color: #f8f9fa;
+            border: 1px solid var(--border-color);
+            border-left: 5px solid var(--primary-blue);
+            padding: 1.5rem;
+            border-radius: 8px;
+        }
+        .team-member h3 { /* team-name */
+            font-family: var(--font-heading);
+            color: var(--primary-blue);
+            margin-bottom: 0.25rem;
+            font-size: 1.25rem;
+        }
+        .team-member p { /* team-role, team-contact */
+            margin-bottom: 0.25rem;
+            font-size: 0.95rem;
+            color: #333;
+        }
+        .team-member .team-role {
+            font-style: italic;
+            color: #555;
+            margin-bottom: 0.75rem;
+        }
+        .team-member .team-contact {
+            font-weight: 500;
+        }
 
         /* --- CHATBOT STYLES --- */
+        /* (All existing chatbot styles are unchanged) */
         .chat-toggle-button {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 60px;
-            height: 60px;
-            background-color: var(--primary-blue);
-            color: white;
-            border-radius: 50%;
-            border: none;
-            cursor: pointer;
+            position: fixed; bottom: 20px; right: 20px;
+            width: 60px; height: 60px;
+            background-color: var(--primary-blue); color: white;
+            border-radius: 50%; border: none; cursor: pointer;
             box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            font-size: 1.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 2010;
-            transition: all 0.3s ease;
+            font-size: 1.5rem; display: flex;
+            align-items: center; justify-content: center;
+            z-index: 2010; transition: all 0.3s ease;
         }
-        .chat-toggle-button:hover {
-            background-color: #1e3a75;
-            transform: scale(1.1);
-        }
-        
+        .chat-toggle-button:hover { background-color: #1e3a75; transform: scale(1.1); }
         .chat-window {
-            display: none; /* Hidden by default */
-            position: fixed;
-            bottom: 90px;
-            right: 20px;
-            width: 350px;
-            height: 450px;
-            background-color: white;
-            border-radius: 12px;
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border-color);
-            z-index: 2009;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            opacity: 0;
+            display: none; position: fixed;
+            bottom: 90px; right: 20px;
+            width: 350px; height: 450px;
+            background-color: white; border-radius: 12px;
+            box-shadow: var(--shadow); border: 1px solid var(--border-color);
+            z-index: 2009; display: flex; flex-direction: column;
+            overflow: hidden; opacity: 0;
             transform: translateY(20px);
             transition: all 0.3s ease;
         }
-        .chat-window.open {
-            display: flex;
-            opacity: 1;
-            transform: translateY(0);
-        }
-        
+        .chat-window.open { display: flex; opacity: 1; transform: translateY(0); }
         .chat-header {
-            background-color: var(--primary-blue);
-            color: white;
-            padding: 1rem;
-            font-family: var(--font-heading);
-            font-weight: 600;
-            font-size: 1.2rem;
-            text-align: center;
+            background-color: var(--primary-blue); color: white;
+            padding: 1rem; font-family: var(--font-heading);
+            font-weight: 600; font-size: 1.2rem; text-align: center;
         }
-        
         .chat-messages {
-            flex-grow: 1;
-            padding: 1rem;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
+            flex-grow: 1; padding: 1rem; overflow-y: auto;
+            display: flex; flex-direction: column; gap: 10px;
         }
-        
-        .chat-message {
-            padding: 0.6rem 0.9rem;
-            border-radius: 18px;
-            max-width: 80%;
-            line-height: 1.4;
-        }
-        .chat-message.user {
-            background-color: var(--accent-orange);
-            color: white;
-            align-self: flex-end;
-            border-bottom-right-radius: 4px;
-        }
-        .chat-message.bot {
-            background-color: #f0f2f5;
-            color: #333;
-            align-self: flex-start;
-            border-bottom-left-radius: 4px;
-        }
-        
-        .chat-input-form {
-            display: flex;
-            border-top: 1px solid var(--border-color);
-        }
-        .chat-input-form input {
-            flex-grow: 1;
-            border: none;
-            padding: 1rem;
-            font-size: 1rem;
-            outline: none;
-        }
+        .chat-message { padding: 0.6rem 0.9rem; border-radius: 18px; max-width: 80%; line-height: 1.4; }
+        .chat-message.user { background-color: var(--accent-orange); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .chat-message.bot { background-color: #f0f2f5; color: #333; align-self: flex-start; border-bottom-left-radius: 4px; }
+        .chat-input-form { display: flex; border-top: 1px solid var(--border-color); }
+        .chat-input-form input { flex-grow: 1; border: none; padding: 1rem; font-size: 1rem; outline: none; }
         .chat-input-form button {
-            border: none;
-            background-color: var(--accent-orange);
-            color: white;
-            padding: 0 1.2rem;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: 600;
+            border: none; background-color: var(--accent-orange); color: white;
+            padding: 0 1.2rem; cursor: pointer;
+            font-size: 1rem; font-weight: 600;
             transition: background-color 0.2s;
         }
-        .chat-input-form button:hover {
-            background-color: #d17521;
-        }
+        .chat-input-form button:hover { background-color: #d17521; }
     </style>
 </head>
 <body>
@@ -243,6 +209,9 @@
         <a href="#" class="about-app-link" id="about-app-trigger">
             What does this app do?
         </a>
+        <a href="#" class="about-app-link" id="contact-team-trigger" style="margin-top: 0.25rem;">
+            Meet the Recruitment Team
+        </a>
         
         <div class="footer-link">
             <p>
@@ -253,52 +222,94 @@
         </div>
     </div>
 
-    <div class="modal-backdrop" id="about-modal-backdrop"></div>
+    <div class="modal-backdrop" id="modal-backdrop"></div>
+
     <div class="modal-content" id="about-modal-content">
-        <span class="modal-close" id="about-modal-close">&times;</span>
+        <span class="modal-close">&times;</span>
         <h2>About This Application</h2>
         <p>This is an AI-powered portal designed to streamline the hiring process for VN Infra Reyality.</p>
-        <ul style="margin-left: 20px; margin-bottom: 1rem;">
-            <li><b>Recruiter Portal:</b> Allows recruiters to automatically scan and score resumes against a job description. It also lists all submitted applications, highlighting shortlisted candidates.</li>
-            <li><b>Candidate Checker:</b> A tool for candidates to check how well their resume matches an open position before they apply.</li>
-            <li><b>Apply for a Job:</b> A simple form that automatically scans the applicant's resume, assigns a match score, and notifies the hiring team.</li>
+        <ul>
+            <li><b>Recruiter Portal:</b> Allows recruiters to automatically scan and score resumes...</li>
+            <li><b>Candidate Checker:</b> A tool for candidates to check their resume match score...</li>
+            <li><b>Apply for a Job:</b> A form that automatically scans and scores an applicant's resume...</li>
         </ul>
         <p>This system saves time and helps identify qualified candidates more efficiently.</p>
     </div>
     
-    
-    <div class="chat-window" id="chat-window">
-        <div class="chat-header">
-            VN Infra Bot
-        </div>
-        <div class="chat-messages" id="chat-messages">
-            <div class="chat-message bot">
-                Hi! I'm the VN Infra Bot. How can I help you today?
+    <div class="modal-content" id="contact-modal-content">
+        <span class="modal-close">&times;</span>
+        <h2>Meet the Recruitment Team</h2>
+        <p>For any queries regarding your application, feel free to contact our team.</p>
+        
+        <div class="team-container">
+            <div class="team-member">
+                <h3>Devesh Reddy</h3>
+                <p class="team-role">SWD in VR</p>
+                <p class="team-contact">Email: pure23ainds@cmrit.ac.in</p>
+                <p class="team-contact">Phone: 6300331730</p>
+            </div>
+            <div class="team-member">
+                <h3>Nihal DR</h3>
+                <p class="team-role">Contact Support in VR</p>
+                <p class="team-contact">Email: nidr23ainds@cmrit.ac.in</p>
+            </div>
+            <div class="team-member">
+                <h3>Tanusree Reddy</h3>
+                <p class="team-role">HR in VR</p>
+                <p class="team-contact">Email: mre23ainds@cmrit.ac.in</p>
             </div>
         </div>
-        <form class="chat-input-form" id="chat-form">
-            <input type="text" id="chat-input" placeholder="Ask a question..." autocomplete="off">
-            <button type="submit">Send</button>
-        </form>
     </div>
     
+    <div class="chat-window" id="chat-window">
+        </div>
     <button class="chat-toggle-button" id="chat-toggle-button">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-chat-dots-fill" viewBox="0 0 16 16">
-            <path d="M16 8c0 3.866-3.582 7-8 7a9.06 9.06 0 0 1-2.347-.306c-.584.296-1.925.864-4.181 1.234-.2.032-.352-.176-.273-.362.354-.836.674-1.95.77-2.966C.744 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7zM5 8a1 1 0 1 0-2 0 1 1 0 0 0 2 0zm4 0a1 1 0 1 0-2 0 1 1 0 0 0 2 0zm3 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
-        </svg>
-    </button>
+        </button>
 
 
     <script>
-        const openButton = document.getElementById('about-app-trigger');
-        const closeButton = document.getElementById('about-modal-close');
-        const backdrop = document.getElementById('about-modal-backdrop');
-        
-        function openModal() { document.body.classList.add('modal-open'); }
-        function closeModal() { document.body.classList.remove('modal-open'); }
+        // --- Generic Modal Handling ---
+        const backdrop = document.getElementById('modal-backdrop');
+        const allModals = document.querySelectorAll('.modal-content');
+        const allCloseButtons = document.querySelectorAll('.modal-close');
 
-        openButton.addEventListener('click', (e) => { e.preventDefault(); openModal(); });
-        closeButton.addEventListener('click', closeModal);
+        function openModal(modal) {
+            if (modal == null) return;
+            backdrop.style.display = 'block';
+            modal.style.display = 'block';
+            setTimeout(() => {
+                backdrop.style.opacity = 1;
+                modal.style.opacity = 1;
+                modal.style.transform = 'translate(-50%, -50%)';
+            }, 10);
+        }
+
+        function closeModal() {
+            backdrop.style.opacity = 0;
+            allModals.forEach(modal => {
+                modal.style.opacity = 0;
+                modal.style.transform = 'translate(-50%, -45%)';
+            });
+            setTimeout(() => {
+                backdrop.style.display = 'none';
+                allModals.forEach(modal => modal.style.display = 'none');
+            }, 300); // 300ms matches the CSS transition
+        }
+        
+        // Add listeners for "About"
+        document.getElementById('about-app-trigger').addEventListener('click', (e) => {
+            e.preventDefault();
+            openModal(document.getElementById('about-modal-content'));
+        });
+        
+        // Add listeners for "Contact"
+        document.getElementById('contact-team-trigger').addEventListener('click', (e) => {
+            e.preventDefault();
+            openModal(document.getElementById('contact-modal-content'));
+        });
+
+        // Add listeners for all close buttons and the backdrop
+        allCloseButtons.forEach(button => button.addEventListener('click', closeModal));
         backdrop.addEventListener('click', closeModal);
     </script>
     
