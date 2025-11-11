@@ -8,63 +8,57 @@ import io
 import json
 from google.generativeai.types import GenerationConfig
 from os import remove as os_remove
-import sqlite3 # <-- SWITCHED BACK TO SQLITE
+import psycopg2 
+from psycopg2.extras import RealDictCursor
 
-# --- 1. CONFIGURATION ---
+# --- CRITICAL CONFIGURATION ---
 API_KEY = os.environ.get('GOOGLE_API_KEY')
-# DATABASE_URL is now ignored for the connection
+DATABASE_URL = os.environ.get('DATABASE_URL') 
 genai.configure(api_key=API_KEY)
 
 app = Flask(__name__)
 CORS(app)
 
-# --- FOLDERS & DATABASE FILE (Ephemeral Local Storage) ---
-# DB will be created as a file in the app directory, which is temporary.
-DB_NAME = 'vn_infra.db' 
-APPLICATION_FOLDER = 'applications' 
-os.makedirs(APPLICATION_FOLDER, exist_ok=True) # This still needs to run
+# --- FOLDERS (For file access) ---
+APPLICATION_FOLDER = '/var/data/applications' 
 
-# --- 2. DATABASE HELPER FUNCTIONS (SQLite) ---
+# --- 1. DATABASE HELPER FUNCTIONS (PostgreSQL) ---
 def get_db_conn():
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row 
+    """Connects to the Render PostgreSQL database."""
+    conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
     return conn
+# (init_db function removed, now in setup.py)
 
-def init_db():
-    print(f"Initializing SQLite database at: {DB_NAME}")
-    with get_db_conn() as conn:
-        conn.execute('''
-            CREATE TABLE IF NOT EXISTS jobs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT NOT NULL,
-                description TEXT NOT NULL
-            );
-        ''')
-        conn.execute('''
-            CREATE TABLE IF NOT EXISTS applications (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                email TEXT NOT NULL,
-                job_id INTEGER NOT NULL,
-                score INTEGER NOT NULL,
-                status TEXT NOT NULL,
-                filename TEXT NOT NULL UNIQUE,
-                summary TEXT,
-                matchingSkills TEXT,
-                missingSkills TEXT,
-                interviewQuestions TEXT,
-                notes TEXT,
-                FOREIGN KEY (job_id) REFERENCES jobs (id)
-            );
-        ''')
-        # ... (Migration logic is removed for brevity but is necessary) ...
-        conn.commit()
-        print("Database initialized.")
 
-# --- 3. AI & PDF HELPERS (Unchanged) ---
-# (get_ai_scan, get_interview_questions, extract_pdf_text functions are unchanged)
+# --- 2. AI & PDF HELPERS (Unchanged) ---
+# (get_ai_scan, get_interview_questions, extract_pdf_text, extract_pdf_text functions are unchanged)
 
-# --- 4. API ENDPOINTS (Using SQLite placeholders) ---
+# --- 3. API ENDPOINTS (All 11 endpoints remain the same) ---
+
+@app.route('/login', methods=['POST'])
+def login():
+    try:
+        data = request.json
+        password_attempt = data.get('password')
+        if password_attempt == 'deva':
+            return jsonify({'success': True})
+        else:
+            return jsonify({'success': False, 'error': 'Incorrect Password'}), 401
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/scan-resume', methods=['POST'])
+def scan_resume():
+    try:
+        resume_file = request.files['resume']
+        jd_text = request.form['jobDescription']
+        resume_text = extract_pdf_text(io.BytesIO(resume_file.read()))
+        if not resume_text:
+            return jsonify({'error': 'Could not read text from PDF.'}), 400
+        ai_response = get_ai_scan(resume_text, jd_text)
+        return jsonify(ai_response)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/apply', methods=['POST'])
 def handle_application():
@@ -75,34 +69,30 @@ def handle_application():
         job_id = request.form['jobId']
         filename = f"{name.replace(' ', '_')}-{job_id}-{resume_file.filename}"
         
-        # --- Check for duplicate & Get Job ---
         conn = get_db_conn()
         cur = conn.cursor()
-        cur.execute("SELECT id FROM applications WHERE filename = ?", (filename,))
+        
+        cur.execute("SELECT id FROM applications WHERE filename = %s", (filename,))
         if cur.fetchone():
             return jsonify({'error': 'You have already applied for this job with this resume.'}), 400
-        cur.execute("SELECT description FROM jobs WHERE id = ?", (job_id,))
+            
+        cur.execute("SELECT description FROM jobs WHERE id = %s", (job_id,))
         job = cur.fetchone()
         if not job: return jsonify({'error': 'Invalid job selected.'}), 400
-        jd_text = job['description']
         
-        # --- Save file (will be deleted on restart) ---
-        file_path = os.path.join(APPLICATION_FOLDER, filename)
-        resume_file.save(file_path)
-
-        # --- Run AI Scan ---
+        jd_text = job['description']
         resume_text = extract_pdf_text(io.BytesIO(resume_file.read()))
         if not resume_text: return jsonify({'error': 'Could not read PDF.'}), 400
+        
         ai_response = get_ai_scan(resume_text, job['description'])
         score = ai_response.get('matchScore', 0)
         status = "Shortlisted" if score >= 60 else "Pending"
         questions = get_interview_questions(ai_response.get('missingSkills', []))
         
-        # --- Save to SQLite (using ? placeholders) ---
         cur.execute('''
             INSERT INTO applications (name, email, job_id, score, status, filename, 
                                       summary, matchingSkills, missingSkills, interviewQuestions, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ''', (name, email, job_id, score, status, filename, 
               ai_response.get('summary'), json.dumps(ai_response.get('matchingSkills')),
               json.dumps(ai_response.get('missingSkills')), questions, ""))
@@ -115,13 +105,129 @@ def handle_application():
         print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
-# (All other endpoints follow the SQLite pattern and are unchanged in logic)
-
-# --- Final Run Block ---
-if __name__ == '__main__':
+@app.route('/get-applications', methods=['GET'])
+def get_applications():
     try:
-        init_db()
+        conn = get_db_conn()
+        cur = conn.cursor()
+        cur.execute('''
+            SELECT a.*, j.title as "jobTitle" 
+            FROM applications a
+            LEFT JOIN jobs j ON a.job_id = j.id
+            ORDER BY a.id DESC
+        ''')
+        apps = cur.fetchall()
+        cur.close()
+        conn.close()
+        return jsonify({'applications': apps})
     except Exception as e:
-        print(f"DB Init failed: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/download-application/<filename>', methods=['GET'])
+def download_application(filename):
+    return jsonify({'error': 'Download is disabled in free-tier deployment.'}), 403
+
+@app.route('/delete-application/<filename>', methods=['DELETE'])
+def delete_application(filename):
+    try:
+        conn = get_db_conn()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM applications WHERE filename = %s", (filename,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({'message': 'Deleted'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/update-status', methods=['POST'])
+def update_status():
+    try:
+        data = request.json
+        conn = get_db_conn()
+        cur = conn.cursor()
+        cur.execute("UPDATE applications SET status = %s WHERE id = %s", (data['status'], data['id']))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({'message': 'Updated'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/update-notes', methods=['POST'])
+def update_notes():
+    try:
+        data = request.json
+        conn = get_db_conn()
+        cur = conn.cursor()
+        cur.execute("UPDATE applications SET notes = %s WHERE id = %s", (data['notes'], data['id']))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({'message': 'Updated'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    try:
+        user_message = request.json['message']
+        CHATBOT_PROMPT = f"You are 'VN Infra Bot'... USER: {user_message}"
+        model = genai.GenerativeModel('gemini-flash-latest')
+        response = model.generate_content(CHATBOT_PROMPT)
+        return jsonify({'reply': response.text})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/get-jobs', methods=['GET'])
+def get_jobs():
+    try:
+        conn = get_db_conn()
+        cur = conn.cursor()
+        cur.execute("SELECT id, title, description FROM jobs ORDER BY title")
+        jobs = cur.fetchall()
+        cur.close()
+        conn.close()
+        return jsonify({'jobs': jobs})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/add-job', methods=['POST'])
+def add_job():
+    try:
+        data = request.json
+        conn = get_db_conn()
+        cur = conn.cursor()
+        cur.execute("INSERT INTO jobs (title, description) VALUES (%s, %s)", (data['title'], data['description']))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({'message': 'Job added'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+        
+@app.route('/get-analytics', methods=['GET'])
+def get_analytics():
+    try:
+        conn = get_db_conn()
+        cur = conn.cursor()
+        total_apps = cur.execute('SELECT COUNT(*) FROM applications').fetchone()['count']
+        total_shortlisted = cur.execute("SELECT COUNT(*) FROM applications WHERE status = 'Shortlisted'").fetchone()['count']
+        avg_score_result = cur.execute('SELECT AVG(score) FROM applications').fetchone()['avg']
+        avg_score = round(avg_score_result) if avg_score_result is not None else 0
+        cur.close()
+        conn.close()
+        analytics_data = {
+            "total_apps": total_apps,
+            "total_shortlisted": total_shortlisted,
+            "avg_score": avg_score
+        }
+        return jsonify(analytics_data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+if __name__ == '__main__':
+    # This block is only for local testing. It won't run on Gunicorn.
+    print("\n--- Running in LOCAL TESTING Mode (Postgres required) ---")
     port = int(os.environ.get('PORT', 5000))
-    app.run(debug=False, host='0.0.0.0', port=port)
+    app.run(debug=True, host='0.0.0.0', port=port)
