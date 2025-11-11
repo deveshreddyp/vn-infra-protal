@@ -37,12 +37,12 @@
 
     <header class="header">
         <nav class="navbar">
-            <a href="home.html" class="nav-brand">
+            <a href="index.html" class="nav-brand">
                 <img src="vn.jpg" alt="VN Infra Reyality Logo">
                 VN Infra Reyality
             </a>
             <div class="nav-links">
-                <a href="home.html" class="nav-link">Back to Portal</a>
+                <a href="index.html" class="nav-link">Back to Portal</a>
             </div>
         </nav>
     </header>
@@ -100,7 +100,7 @@
             formData.append('resume', resumeFile);
             formData.append('jobDescription', jdText);
             try {
-                // --- UPDATED URL ---
+                // --- URL for Deployment ---
                 const response = await fetch('https://vn-infra-protal-1.onrender.com/scan-resume', { method: 'POST', body: formData });
                 const data = await response.json();
                 if (!response.ok) { throw new Error(data.error || 'Network response was not ok'); }
@@ -129,7 +129,7 @@
                 return; 
             }
             try {
-                // --- UPDATED URL ---
+                // --- URL for Deployment ---
                 const response = await fetch(`https://vn-infra-protal-1.onrender.com/delete-application/${filename}`, {
                     method: 'DELETE'
                 });
@@ -147,7 +147,7 @@
             badge.style.animation = 'none';
 
             try {
-                // --- UPDATED URL ---
+                // --- URL for Deployment ---
                 const response = await fetch('https://vn-infra-protal-1.onrender.com/get-applications');
                 const data = await response.json();
 
@@ -200,7 +200,7 @@
         // Notification Badge Script
         document.addEventListener('DOMContentLoaded', async () => {
             try {
-                // --- UPDATED URL ---
+                // --- URL for Deployment ---
                 const response = await fetch('https://vn-infra-protal-1.onrender.com/get-applications');
                 const data = await response.json();
                 if (response.ok && data.applications.length > 0) {
