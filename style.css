@@ -8,38 +8,38 @@
 }
 
 body {
-    font-family: 'Roboto', sans-serif; /* A clean, professional font */
-    background-color: #f0f2f5; /* Light, subtle background */
+    font-family: 'Roboto', sans-serif;
+    background-color: #f0f2f5;
     color: #333;
-    padding-top: 80px; /* Space for the fixed header */
+    padding-top: 80px; 
     line-height: 1.6;
 }
 
 /* --- 2. Brand Colors (from VN Infra Logo) --- */
 :root {
-    --primary-blue: #234789; /* Deep Blue from logo */
-    --accent-orange: #f28c28; /* Vibrant Orange from logo */
+    --primary-blue: #234789;
+    --accent-orange: #f28c28;
     --light-color: #ffffff;
     --dark-color: #222222;
     --border-color: #e0e0e0;
-    --shadow: 0 6px 15px rgba(0, 0, 0, 0.08); /* Stronger but clean shadow */
-    --font-heading: 'Montserrat', sans-serif; /* Stronger font for headings */
+    --shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+    --font-heading: 'Montserrat', sans-serif;
 }
 
 /* --- 3. Header/Navbar --- */
 .header {
-    background-color: var(--primary-blue); /* Solid blue header */
+    background-color: var(--primary-blue);
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     z-index: 1000;
-    padding: 0.5rem 0; /* Vertical padding for header content */
+    padding: 0.5rem 0;
 }
 
 .navbar {
-    max-width: 1200px; /* Wider nav bar */
+    max-width: 1200px;
     margin: auto;
     padding: 0 2rem;
     display: flex;
@@ -48,17 +48,17 @@ body {
 }
 
 .nav-brand {
-    display: flex; /* Allow logo and text to sit side-by-side */
+    display: flex; 
     align-items: center;
     text-decoration: none;
-    color: var(--light-color); /* White text for brand name */
+    color: var(--light-color);
     font-family: var(--font-heading);
     font-size: 1.6rem;
     font-weight: 700;
 }
 
 .nav-brand img {
-    height: 40px; /* Adjust logo size */
+    height: 40px; 
     margin-right: 10px;
 }
 
@@ -70,7 +70,7 @@ body {
 .nav-link {
     font-size: 1rem;
     font-weight: 500;
-    color: var(--light-color); /* White links */
+    color: var(--light-color);
     text-decoration: none;
     padding: 0.5rem 1rem;
     border-radius: 6px;
@@ -78,18 +78,18 @@ body {
 }
 
 .nav-link:hover {
-    background-color: rgba(255, 255, 255, 0.15); /* Subtle white hover */
-    color: var(--accent-orange); /* Orange text on hover */
+    background-color: rgba(255, 255, 255, 0.15);
+    color: var(--accent-orange);
 }
 
 
 /* --- 4. Main Page Layout --- */
 .page-container {
-    max-width: 1200px; /* Wider content area */
-    margin: 3rem auto; /* More vertical space */
+    max-width: 1200px;
+    margin: 3rem auto;
     padding: 0 2rem;
     display: grid;
-    gap: 2.5rem; /* More space between cards */
+    gap: 2.5rem;
 }
 
 /* --- 5. Card Layout (for forms, lists, etc.) --- */
@@ -97,8 +97,8 @@ body {
     background-color: var(--light-color);
     border-radius: 12px;
     box-shadow: var(--shadow);
-    padding: 2.5rem; /* More internal padding */
-    border-top: 5px solid var(--accent-orange); /* Orange accent on cards */
+    padding: 2.5rem;
+    border-top: 5px solid var(--accent-orange);
 }
 
 h1, h2, h3 {
@@ -111,13 +111,13 @@ h1, h2, h3 {
 h1 {
     font-size: 2.5rem;
     text-align: center;
-    color: var(--primary-blue); /* Blue main titles */
+    color: var(--primary-blue);
 }
 h2 {
     font-size: 1.8rem;
     border-bottom: 2px solid var(--border-color);
     padding-bottom: 0.8rem;
-    color: var(--primary-blue); /* Blue section titles */
+    color: var(--primary-blue);
 }
 
 p {
@@ -127,7 +127,7 @@ p {
 
 /* --- 6. Form Elements --- */
 label {
-    font-weight: 500; /* Slightly lighter */
+    font-weight: 500;
     margin-top: 1.2rem;
     display: block;
     color: #444;
@@ -138,25 +138,28 @@ input[type="text"],
 input[type="email"],
 input[type="password"],
 input[type="file"],
-textarea {
+textarea,
+select {
     width: 100%;
     padding: 0.8rem;
     margin-top: 0.6rem;
-    border: 1px solid #c0c0c0; /* Lighter border */
+    border: 1px solid #c0c0c0;
     border-radius: 8px;
     font-size: 1rem;
     font-family: inherit;
     transition: border-color 0.3s, box-shadow 0.3s;
+    background-color: white; /* for select */
 }
 
-input:focus, textarea:focus {
+
+input:focus, textarea:focus, select:focus {
     outline: none;
-    border-color: var(--accent-orange); /* Orange focus glow */
+    border-color: var(--accent-orange);
     box-shadow: 0 0 0 3px rgba(242, 140, 40, 0.25);
 }
 
 textarea {
-    height: 160px; /* Slightly taller */
+    height: 160px;
     resize: vertical;
 }
 
@@ -165,7 +168,7 @@ textarea {
     width: 100%;
     padding: 0.9rem;
     margin-top: 1.8rem;
-    background-color: var(--accent-orange); /* Orange primary button */
+    background-color: var(--accent-orange);
     color: white;
     border: none;
     border-radius: 8px;
@@ -174,29 +177,44 @@ textarea {
     cursor: pointer;
     transition: all 0.3s ease;
     letter-spacing: 0.5px;
-    text-decoration: none; /* For button-like links */
-    display: inline-block; /* For button-like links */
+    text-decoration: none;
+    display: inline-block;
 }
 
 .btn:hover {
-    background-color: #d17521; /* Slightly darker orange on hover */
+    background-color: #d17521;
     transform: translateY(-3px);
     box-shadow: 0 5px 15px rgba(242, 140, 40, 0.3);
 }
 
 .btn-secondary {
-    background-color: var(--primary-blue); /* Blue secondary button */
+    background-color: var(--primary-blue);
 }
 .btn-secondary:hover {
-    background-color: #1e3a75; /* Darker blue */
+    background-color: #1e3a75;
     box-shadow: 0 5px 15px rgba(35, 71, 137, 0.3);
 }
 
-.btn-green { /* For 'Apply for a Job' button on home */
+.btn-green { 
     background-color: #28a745;
 }
 .btn-green:hover {
     background-color: #218838;
+}
+
+.btn-delete {
+    background-color: #dc3545; 
+    color: white;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.8rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-top: 0; /* Override margin */
+}
+.btn-delete:hover {
+    background-color: #c82333; 
 }
 
 /* --- 8. Results & Lists --- */
@@ -208,8 +226,8 @@ textarea {
 #results h2 { border: none; font-size: 1.6rem; margin-bottom: 0.8rem;}
 
 .summary {
-    background-color: #fff9e6; /* Very light orange background */
-    border-left: 5px solid var(--accent-orange); /* Orange left border */
+    background-color: #fff9e6; 
+    border-left: 5px solid var(--accent-orange);
     padding: 1.2rem;
     margin-top: 1.5rem;
     font-style: italic;
@@ -217,36 +235,227 @@ textarea {
     color: #4a4a4a;
 }
 
-#application-list {
-    list-style: none;
-    padding: 0;
-    margin-top: 1.8rem;
+/* Application Table */
+.applications-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1.5rem;
 }
-#application-list li {
-    background-color: #f8fbfd; /* Very light blue for list items */
-    padding: 1rem 1.2rem;
-    border: 1px solid #e8eef2;
-    border-radius: 8px;
-    margin-bottom: 0.7rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    transition: background-color 0.2s ease;
+.applications-table th, .applications-table td {
+    padding: 0.8rem 1rem;
+    border: 1px solid var(--border-color);
+    text-align: left;
+    vertical-align: middle; 
 }
-#application-list li:hover {
-    background-color: #eef7fc;
+.applications-table th {
+    background-color: #f8f9fa;
+}
+.applications-table td {
+    font-size: 0.95rem;
+}
+.status-shortlisted {
+    color: #155724; 
+    font-weight: 700;
+    background-color: #d4edda;
+}
+.status-pending {
+    color: #555;
 }
 
 #application-list a {
     font-weight: 600;
     text-decoration: none;
-    color: var(--primary-blue); /* Blue links */
+    color: var(--primary-blue);
 }
 #application-list a:hover { text-decoration: underline; color: var(--accent-orange);}
 
+/* --- 9. Modal (Pop-up) --- */
+.modal-backdrop {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 2000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+.modal-content {
+    display: none;
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--light-color);
+    padding: 2.5rem;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    width: 90%;
+    max-width: 600px;
+    z-index: 2001;
+    opacity: 0;
+    transform: translate(-50%, -45%);
+    transition: all 0.3s ease;
+}
+.modal-close {
+    position: absolute;
+    top: 10px; right: 20px;
+    font-size: 2rem;
+    font-weight: bold;
+    color: #aaa;
+    cursor: pointer;
+}
+.modal-close:hover { color: var(--dark-color); }
+
+.modal-content h2 { 
+    color: var(--primary-blue); 
+    margin-bottom: 1rem;
+    border: none;
+}
+.modal-content p { 
+    margin-bottom: 0.5rem; 
+    line-height: 1.7;
+}
+
+body.modal-open .modal-backdrop {
+    display: block;
+    opacity: 1;
+}
+body.modal-open .modal-content {
+    display: block;
+    opacity: 1;
+    transform: translate(-50%, -50%);
+}
+
+.about-app-link {
+    display: inline-block;
+    margin-top: 2rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--primary-blue);
+    cursor: pointer;
+    text-decoration: none;
+    padding: 0.5rem;
+}
+.about-app-link:hover {
+    text-decoration: underline;
+}
+
+/* --- 10. Chatbot Styles --- */
+.chat-toggle-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 60px;
+    height: 60px;
+    background-color: var(--primary-blue);
+    color: white;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2010;
+    transition: all 0.3s ease;
+}
+.chat-toggle-button:hover {
+    background-color: #1e3a75;
+    transform: scale(1.1);
+}
+
+.chat-window {
+    display: none; 
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    width: 350px;
+    height: 450px;
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border-color);
+    z-index: 2009;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s ease;
+}
+.chat-window.open {
+    display: flex;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.chat-header {
+    background-color: var(--primary-blue);
+    color: white;
+    padding: 1rem;
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 1.2rem;
+    text-align: center;
+}
+
+.chat-messages {
+    flex-grow: 1;
+    padding: 1rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.chat-message {
+    padding: 0.6rem 0.9rem;
+    border-radius: 18px;
+    max-width: 80%;
+    line-height: 1.4;
+}
+.chat-message.user {
+    background-color: var(--accent-orange);
+    color: white;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+}
+.chat-message.bot {
+    background-color: #f0f2f5;
+    color: #333;
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+}
+
+.chat-input-form {
+    display: flex;
+    border-top: 1px solid var(--border-color);
+}
+.chat-input-form input {
+    flex-grow: 1;
+    border: none;
+    padding: 1rem;
+    font-size: 1rem;
+    outline: none;
+    margin-top: 0; /* Override form styles */
+}
+.chat-input-form button {
+    border: none;
+    background-color: var(--accent-orange);
+    color: white;
+    padding: 0 1.2rem;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: background-color 0.2s;
+}
+.chat-input-form button:hover {
+    background-color: #d17521;
+}
+
 /* --- Utility Classes --- */
 .text-center { text-align: center; }
-.mt-1 { margin-top: 1rem; }
 .mb-2 { margin-bottom: 1.5rem; }
 
 /* Responsive adjustments */

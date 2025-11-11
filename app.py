@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-import os
+import os  # <-- Added for environment variables
 import traceback
 import google.generativeai as genai
 import PyPDF2
@@ -10,7 +10,8 @@ from google.generativeai.types import GenerationConfig
 from os import remove as os_remove
 
 # --- 1. CONFIGURE YOUR API KEY ---
-API_KEY = os.environ.get('GOOGLE_API_KEY') # Make sure your secret key is here
+# This now reads from the Render server's settings
+API_KEY = os.environ.get('GOOGLE_API_KEY') 
 try:
     genai.configure(api_key=API_KEY)
 except Exception as e:
@@ -99,7 +100,6 @@ def save_db(data):
 
 @app.route('/scan-resume', methods=['POST'])
 def scan_resume():
-    # (This function is unchanged)
     try:
         resume_file = request.files['resume']
         jd_text = request.form['jobDescription']
@@ -117,7 +117,6 @@ def scan_resume():
 
 @app.route('/apply', methods=['POST'])
 def handle_application():
-    # (This function is unchanged)
     try:
         resume_file = request.files['resume']
         candidate_name = request.form['name']
@@ -158,7 +157,6 @@ def handle_application():
 
 @app.route('/get-applications', methods=['GET'])
 def get_applications():
-    # (This function is unchanged)
     try:
         applications = load_db()
         applications.reverse() 
@@ -171,7 +169,6 @@ def get_applications():
 
 @app.route('/download-application/<filename>', methods=['GET'])
 def download_application(filename):
-    # (This function is unchanged)
     try:
         return send_from_directory(
             APPLICATION_FOLDER,
@@ -179,17 +176,13 @@ def download_application(filename):
             as_attachment=True
         )
     except Exception as e:
-        # --- THIS IS THE FIX ---
-        # The extra "D" is removed from the print statement
         print("\n" + "="*50 + "\n>>> CRASH REPORT (download-application) <<<\n")
-        # ------------------------
         traceback.print_exc() 
         print("="*50 + "\n")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/delete-application/<filename>', methods=['DELETE'])
 def delete_application(filename):
-    # (This function is unchanged)
     try:
         applications = load_db()
         app_to_remove = None
@@ -211,13 +204,12 @@ def delete_application(filename):
         print("="*50 + "\n")
         return jsonify({'error': str(e)}), 500
 
-# --- 6. NEW: ENDPOINT FOR THE CHATBOT ---
+# --- 6. ENDPOINT FOR THE CHATBOT ---
 @app.route('/chat', methods=['POST'])
 def chat():
     try:
         user_message = request.json['message']
         
-        # This is the new "personality" for the AI
         CHATBOT_PROMPT = f"""
         You are 'VN Infra Bot', a helpful AI assistant for the VN Infra Reyality HR Portal.
         Your main website is https://vr-infra-website.web.app.
@@ -236,7 +228,7 @@ def chat():
         """
         
         model = genai.GenerativeModel('gemini-flash-latest')
-        generation_config = GenerationConfig(temperature=0.7) # A bit creative
+        generation_config = GenerationConfig(temperature=0.7) 
         response = model.generate_content(CHATBOT_PROMPT, generation_config=generation_config)
         
         return jsonify({'reply': response.text})

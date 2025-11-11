@@ -6,31 +6,26 @@
     <title>Recruiter Dashboard - VN Infra</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        /* --- STYLES for the application table --- */
         .applications-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
         .applications-table th, .applications-table td { padding: 0.8rem 1rem; border: 1px solid var(--border-color); text-align: left; vertical-align: middle; }
         .applications-table th { background-color: #f8f9fa; }
         .applications-table td { font-size: 0.95rem; }
         .status-shortlisted { color: #155724; font-weight: 700; background-color: #d4edda; }
         .status-pending { color: #555; }
-        .btn-delete { background-color: #dc3545; color: white; padding: 0.3rem 0.6rem; font-size: 0.8rem; border: none; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; }
-        .btn-delete:hover { background-color: #c82333; }
-
-        /* --- NEW: Style for the notification badge --- */
+        
         #notification-badge {
-            display: none; /* Hidden by default */
-            background-color: var(--accent-orange); /* Brand orange */
+            display: none;
+            background-color: var(--accent-orange);
             color: white;
             font-size: 0.9rem;
             font-weight: 700;
-            padding: 2px 9px; /* Makes it circular */
+            padding: 2px 9px;
             border-radius: 50%;
             margin-left: 10px;
-            vertical-align: middle; /* Aligns with the text */
+            vertical-align: middle;
             animation: pulse 1.5s infinite;
         }
         
-        /* Pulse animation to draw attention */
         @keyframes pulse {
             0% { box-shadow: 0 0 0 0 rgba(242, 140, 40, 0.7); }
             70% { box-shadow: 0 0 0 10px rgba(242, 140, 40, 0); }
@@ -95,7 +90,6 @@
 
     <script>
         const scanForm = document.getElementById('scan-form');
-        // ... (rest of scanner JS is unchanged) ...
         const resultsDiv = document.getElementById('results');
         scanForm.addEventListener('submit', async function(event) {
             event.preventDefault(); 
@@ -106,7 +100,8 @@
             formData.append('resume', resumeFile);
             formData.append('jobDescription', jdText);
             try {
-                const response = await fetch('http://127.0.0.1:5000/scan-resume', { method: 'POST', body: formData });
+                // --- UPDATED URL ---
+                const response = await fetch('https://vn-infra-protal-1.onrender.com/scan-resume', { method: 'POST', body: formData });
                 const data = await response.json();
                 if (!response.ok) { throw new Error(data.error || 'Network response was not ok'); }
                 resultsDiv.innerHTML = `
@@ -127,14 +122,15 @@
     <script>
         const loadButton = document.getElementById('load-apps-button');
         const appListBody = document.getElementById('application-list-body');
-        const badge = document.getElementById('notification-badge'); // Get the badge
+        const badge = document.getElementById('notification-badge'); 
 
         async function deleteApplication(filename, name, rowElement) {
             if (!confirm(`Are you sure you want to delete the application for ${name}?`)) {
                 return; 
             }
             try {
-                const response = await fetch(`http://127.0.0.1:5000/delete-application/${filename}`, {
+                // --- UPDATED URL ---
+                const response = await fetch(`https://vn-infra-protal-1.onrender.com/delete-application/${filename}`, {
                     method: 'DELETE'
                 });
                 const data = await response.json();
@@ -147,20 +143,25 @@
         }
 
         async function loadApplications() {
-            // --- NEW: Hide the badge when the "load" button is clicked ---
             badge.style.display = 'none';
-            badge.style.animation = 'none'; // Stop pulsing
-            // -----------------------------------------------------------
+            badge.style.animation = 'none';
 
             try {
-                const response = await fetch('http://127.0.0.1:5000/get-applications');
+                // --- UPDATED URL ---
+                const response = await fetch('https://vn-infra-protal-1.onrender.com/get-applications');
                 const data = await response.json();
-                if (!response.ok) { throw new Error(data.error || 'Could not load applications'); }
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Could not load applications');
+                }
+                
                 appListBody.innerHTML = ''; 
+
                 if (data.applications.length === 0) {
                     appListBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No applications found.</td></tr>';
                     return;
                 }
+
                 data.applications.forEach(app => {
                     const row = document.createElement('tr');
                     const statusClass = app.status === 'Shortlisted' ? 'status-shortlisted' : 'status-pending';
@@ -171,7 +172,7 @@
                         <td><b>${app.score}%</b></td>
                         <td class="${statusClass}">${app.status}</td>
                         <td>
-                            <a href="http://127.0.0.1:5000/download-application/${app.filename}" target="_blank">
+                            <a href="https://vn-infra-protal-1.onrender.com/download-application/${app.filename}" target="_blank">
                                 Download
                             </a>
                         </td>
@@ -187,6 +188,7 @@
                     row.appendChild(deleteCell);
                     appListBody.appendChild(row);
                 });
+
             } catch (error) {
                 console.error('Error loading applications:', error);
                 appListBody.innerHTML = `<tr><td colspan="7" style="color: red;">${error.message}</td></tr>`;
@@ -194,27 +196,21 @@
         }
         
         loadButton.addEventListener('click', loadApplications);
-    </script>
-    
-    <script>
-        // This runs automatically when the page loads
+        
+        // Notification Badge Script
         document.addEventListener('DOMContentLoaded', async () => {
             try {
-                // 1. Call the API just to get the count
-                const response = await fetch('http://127.0.0.1:5000/get-applications');
+                // --- UPDATED URL ---
+                const response = await fetch('https://vn-infra-protal-1.onrender.com/get-applications');
                 const data = await response.json();
-
                 if (response.ok && data.applications.length > 0) {
-                    // 2. We have new applications! Show the badge.
                     badge.textContent = data.applications.length;
                     badge.style.display = 'inline-block';
                 }
             } catch (error) {
-                // Don't show a big error, just log it to the console
                 console.error('Error fetching notification count:', error);
             }
         });
     </script>
-    
 </body>
 </html>
