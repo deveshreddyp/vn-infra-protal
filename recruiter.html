@@ -5,32 +5,55 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Recruiter Dashboard - VN Infra</title>
     <link rel="stylesheet" href="style.css">
+    
     <style>
+        /* (All styles for recruiter.html are unchanged) */
         .applications-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
         .applications-table th, .applications-table td { padding: 0.8rem 1rem; border: 1px solid var(--border-color); text-align: left; vertical-align: middle; }
         .applications-table th { background-color: #f8f9fa; }
         .applications-table td { font-size: 0.95rem; }
         .status-shortlisted { color: #155724; font-weight: 700; background-color: #d4edda; }
         .status-pending { color: #555; }
-        
-        #notification-badge {
-            display: none;
-            background-color: var(--accent-orange);
-            color: white;
-            font-size: 0.9rem;
-            font-weight: 700;
-            padding: 2px 9px;
-            border-radius: 50%;
-            margin-left: 10px;
-            vertical-align: middle;
-            animation: pulse 1.5s infinite;
-        }
-        
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(242, 140, 40, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(242, 140, 40, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(242, 140, 40, 0); }
-        }
+        .status-interviewing { background-color: #fff3cd; color: #664d03; font-weight: 700;}
+        .status-rejected { background-color: #f8d7da; color: #58151c; font-weight: 700;}
+        .status-hired { background-color: #cfe2ff; color: #052c65; font-weight: 700;}
+        .btn-delete { background-color: #dc3545; color: white; padding: 0.3rem 0.6rem; font-size: 0.8rem; border: none; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; }
+        .btn-delete:hover { background-color: #c82333; }
+        #notification-badge { display: none; background-color: var(--accent-orange); color: white; font-size: 0.9rem; font-weight: 700; padding: 2px 9px; border-radius: 50%; margin-left: 10px; vertical-align: middle; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(242, 140, 40, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(242, 140, 40, 0); } 100% { box-shadow: 0 0 0 0 rgba(242, 140, 40, 0); } }
+        .clickable-name { color: var(--primary-blue); font-weight: 600; text-decoration: underline; cursor: pointer; }
+        .clickable-name:hover { color: var(--accent-orange); }
+        .modal-backdrop { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); z-index: 2000; opacity: 0; transition: opacity 0.3s ease; }
+        .modal-content { display: none; position: fixed; top: 50%; left: 50%; background-color: var(--light-color); padding: 2.5rem; border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); width: 90%; max-width: 650px; max-height: 80vh; overflow-y: auto; z-index: 2001; opacity: 0; transform: translate(-50%, -45%); transition: all 0.3s ease; text-align: left; }
+        .modal-close { position: absolute; top: 10px; right: 20px; font-size: 2rem; font-weight: bold; color: #aaa; cursor: pointer; }
+        .modal-close:hover { color: var(--dark-color); }
+        body.modal-open .modal-backdrop { display: block; opacity: 1; }
+        body.modal-open .modal-content { display: block; opacity: 1; transform: translate(-50%, -50%); }
+        .modal-content h2 { color: var(--primary-blue); margin-bottom: 1rem; border: none; }
+        .modal-content h3 { font-family: var(--font-heading); color: var(--primary-blue); font-size: 1.2rem; margin-top: 1.5rem; margin-bottom: 0.5rem; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .modal-content .skill-list, .modal-content .question-list { list-style-type: disc; margin-left: 20px; padding-left: 5px; }
+        .modal-content .question-list { list-style-type: decimal; }
+        .modal-content .skill-list li, .modal-content .question-list li { font-size: 0.95rem; margin-bottom: 5px; }
+        .action-form { display: flex; gap: 10px; align-items: center; margin-top: 1rem; }
+        .action-form select, .action-form textarea { flex-grow: 1; margin-top: 0; }
+        .action-form button { width: auto; margin-top: 0; font-size: 0.9rem; align-self: flex-start; }
+        #modal-notes { height: 80px; resize: vertical; }
+        #note-save-status { font-size: 0.85rem; color: green; margin-left: 10px; visibility: hidden; }
+        .filter-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 1rem; border-bottom: 2px solid var(--border-color); padding-bottom: 1rem; }
+        .filter-bar .btn-filter { width: auto; margin-top: 0; padding: 0.5rem 1rem; font-size: 0.9rem; background-color: var(--light-color); color: var(--primary-blue); border: 1px solid var(--border-color); cursor: pointer; transition: all 0.2s ease; }
+        .filter-bar .btn-filter:hover { background-color: #f0f2f5; border-color: #ccc; }
+        .filter-bar .btn-filter.active { background-color: var(--primary-blue); color: var(--light-color); border-color: var(--primary-blue); }
+        .job-list { list-style-type: none; padding: 0; margin-top: 1rem; }
+        .job-list-item { background-color: #f8f9fa; padding: 1rem; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 0.75rem; }
+        .job-list-item h4 { font-family: var(--font-heading); color: var(--primary-blue); font-size: 1.1rem; margin-bottom: 0.25rem; }
+        .job-list-item p { font-size: 0.9rem; color: #555; margin-bottom: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        #job-form-status { font-weight: 600; }
+        .status-success { color: green; }
+        .status-error { color: var(--accent-orange); }
+        .stats-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 1rem; }
+        .stat-card { background-color: #f8f9fa; border: 1px solid var(--border-color); border-left: 5px solid var(--primary-blue); border-radius: 8px; padding: 1.5rem; text-align: center; }
+        .stat-card h4 { font-family: var(--font-heading); font-size: 1.1rem; color: #555; margin-bottom: 0.5rem; font-weight: 600; }
+        .stat-card .stat-number { font-size: 2.5rem; font-weight: 700; color: var(--primary-blue); }
     </style>
 </head>
 <body>
@@ -48,6 +71,24 @@
     </header>
 
     <main class="page-container">
+    
+        <div class="card">
+            <h2>At-a-Glance</h2>
+            <div class="stats-container">
+                <div class="stat-card">
+                    <h4>Total Applications</h4>
+                    <p class="stat-number" id="stat-total-apps">0</p>
+                </div>
+                <div class="stat-card" style="border-left-color: #155724;">
+                    <h4>Total Shortlisted</h4>
+                    <p class="stat-number" id="stat-total-shortlisted">0</p>
+                </div>
+                <div class="stat-card" style="border-left-color: var(--accent-orange);">
+                    <h4>Average Score</h4>
+                    <p class="stat-number" id="stat-avg-score">0%</p>
+                </div>
+            </div>
+        </div>
 
         <div class="card">
             <h2>AI Resume Scanner</h2>
@@ -63,11 +104,19 @@
 
         <div class="card">
             <h2>Submitted Applications <span id="notification-badge"></span></h2>
-            
             <button id="load-apps-button" class="btn btn-secondary" style="width: auto;">
                 Load Applications
             </button>
-            
+            <div class="filter-bar" style="margin-top: 1.5rem;">
+                <span>Filter by:</span>
+                <button class="btn-filter active" data-filter="All">All</button>
+                <button class="btn-filter" data-filter="Shortlisted">Shortlisted</button>
+                <button class="btn-filter" data-filter="Pending">Pending</button>
+                <button class="btn-filter" data-filter="Interviewing">Interviewing</button>
+                <button class="btn-filter" data-filter="Rejected">Rejected</button>
+                <span style="margin-left: auto;">Sort by:</span>
+                <button id="sort-by-score" class="btn-filter">Score (High to Low)</button>
+            </div>
             <div style="overflow-x: auto;">
                 <table class="applications-table">
                     <thead>
@@ -78,15 +127,64 @@
                             <th>Score</th>
                             <th>Status</th>
                             <th>Resume</th>
-                            <th>Action</th>
+                            <th>Action</th> 
                         </tr>
                     </thead>
                     <tbody id="application-list-body">
-                        </tbody>
+                    </tbody>
                 </table>
             </div>
         </div>
+        
+        <div class="card">
+            <h2>Manage Job Postings</h2>
+            <p>Add new job roles here. They will automatically appear on the "Apply for a Job" page.</p>
+            <form id="add-job-form">
+                <label for="job-title">New Job Title:</label>
+                <input type="text" id="job-title-input" placeholder="e.g., Project Manager" required>
+                <label for="job-description">Job Description:</label>
+                <textarea id="job-description-input" placeholder="Paste the full job description here..." required></textarea>
+                <button type="submit" class="btn">Add New Job</button>
+                <p id="job-form-status" style="margin-top: 1rem;"></p>
+            </form>
+            <h3 style="margin-top: 2rem;">Current Live Jobs</h3>
+            <button id="load-jobs-button" class="btn btn-secondary" style="width: auto; margin-top: 0.5rem;">Refresh Job List</button>
+            <div id="job-list-container">
+                <ul class="job-list" id="job-list"></ul>
+            </div>
+        </div>
+        
     </main>
+    
+    <div class="modal-backdrop" id="modal-backdrop"></div>
+    <div class="modal-content" id="details-modal">
+        <span class="modal-close" id="modal-close-button">&times;</span>
+        <h2 id="modal-name">Candidate Details</h2>
+        <div class="summary" id="modal-summary" style="margin-top: 0;"></div>
+        <h3>Update Status</h3>
+        <form class="action-form" id="status-update-form">
+            <select id="status-select">
+                <option value="Pending">Pending</option>
+                <option value="Shortlisted">Shortlisted</option>
+                <option value="Interviewing">Interviewing</option>
+                <option value="Rejected">Rejected</option>
+                <option value="Hired">Hired</option>
+            </select>
+            <button type="submit" class="btn btn-secondary">Update</button>
+        </form>
+        <h3>Recruiter Notes</h3>
+        <form class="action-form" id="note-update-form">
+            <textarea id="modal-notes" placeholder="Add private notes here..."></textarea>
+            <button type="submit" class="btn btn-secondary">Save Note</button>
+        </form>
+        <span id="note-save-status">Note saved!</span>
+        <h3>Matching Skills</h3>
+        <ul class="skill-list" id="modal-matching-skills"></ul>
+        <h3>Missing Skills</h3>
+        <ul class="skill-list" id="modal-missing-skills"></ul>
+        <h3>AI-Generated Interview Questions</h3>
+        <ol class="question-list" id="modal-interview-questions"></ol>
+    </div>
 
     <script>
         const scanForm = document.getElementById('scan-form');
@@ -100,7 +198,7 @@
             formData.append('resume', resumeFile);
             formData.append('jobDescription', jdText);
             try {
-                // --- URL for Deployment ---
+                // --- DEPLOYMENT URL ---
                 const response = await fetch('https://vn-infra-protal-1.onrender.com/scan-resume', { method: 'POST', body: formData });
                 const data = await response.json();
                 if (!response.ok) { throw new Error(data.error || 'Network response was not ok'); }
@@ -120,75 +218,191 @@
     </script>
     
     <script>
+        // --- All elements ---
         const loadButton = document.getElementById('load-apps-button');
         const appListBody = document.getElementById('application-list-body');
-        const badge = document.getElementById('notification-badge'); 
+        const badge = document.getElementById('notification-badge');
+        const backdrop = document.getElementById('modal-backdrop');
+        const detailsModal = document.getElementById('details-modal');
+        const closeModalButton = document.getElementById('modal-close-button');
+        const statusUpdateForm = document.getElementById('status-update-form');
+        const statusSelect = document.getElementById('status-select');
+        const noteUpdateForm = document.getElementById('note-update-form');
+        const noteInput = document.getElementById('modal-notes');
+        const noteSaveStatus = document.getElementById('note-save-status');
+        const filterBar = document.querySelector('.filter-bar');
+        const sortByScoreButton = document.getElementById('sort-by-score');
+        const addJobForm = document.getElementById('add-job-form');
+        const jobTitleInput = document.getElementById('job-title-input');
+        const jobDescInput = document.getElementById('job-description-input');
+        const jobFormStatus = document.getElementById('job-form-status');
+        const jobList = document.getElementById('job-list');
+        const loadJobsButton = document.getElementById('load-jobs-button');
+        
+        let currentAppId = null; 
+        let applicationsData = []; 
+        let currentFilter = 'All'; 
+        let currentSort = 'default'; 
 
-        async function deleteApplication(filename, name, rowElement) {
-            if (!confirm(`Are you sure you want to delete the application for ${name}?`)) {
-                return; 
+        // --- Modal Open/Close ---
+        function openModal() { document.body.classList.add('modal-open'); }
+        function closeModal() { document.body.classList.remove('modal-open'); }
+        closeModalButton.addEventListener('click', closeModal);
+        backdrop.addEventListener('click', closeModal);
+
+        // --- Show Details ---
+        function showDetails(app) {
+            currentAppId = app.id; 
+            statusSelect.value = app.status; 
+            noteInput.value = app.notes || ''; 
+            noteSaveStatus.style.visibility = 'hidden'; 
+            
+            const matchingSkills = JSON.parse(app.matchingSkills || '[]');
+            const missingSkills = JSON.parse(app.missingSkills || '[]');
+            const interviewQuestions = JSON.parse(app.interviewQuestions || '[]');
+            
+            document.getElementById('modal-name').textContent = `${app.name} (Score: ${app.score}%)`;
+            document.getElementById('modal-summary').innerHTML = `<p>${app.summary || 'No summary available.'}</p>`;
+            
+            const matchingList = document.getElementById('modal-matching-skills');
+            matchingList.innerHTML = ''; 
+            if (matchingSkills.length > 0) {
+                matchingSkills.forEach(skill => { matchingList.innerHTML += `<li>${skill}</li>`; });
+            } else {
+                matchingList.innerHTML = '<li>No matching skills found.</li>';
             }
+            
+            const missingList = document.getElementById('modal-missing-skills');
+            missingList.innerHTML = ''; 
+            if (missingSkills.length > 0) {
+                missingSkills.forEach(skill => { missingList.innerHTML += `<li>${skill}</li>`; });
+            } else {
+                missingList.innerHTML = '<li>No missing skills found.</li>';
+            }
+
+            const questionList = document.getElementById('modal-interview-questions');
+            questionList.innerHTML = '';
+            if (interviewQuestions && interviewQuestions.length > 0) {
+                 interviewQuestions.forEach(question => {
+                    questionList.innerHTML += `<li>${question}</li>`;
+                 });
+            } else {
+                questionList.innerHTML = '<li>No specific questions generated.</li>';
+            }
+            
+            openModal();
+        }
+
+        // --- Delete Application ---
+        async function deleteApplication(filename, name, rowElement) {
+            if (!confirm(`Are you sure you want to delete the application for ${name}?`)) { return; }
             try {
-                // --- URL for Deployment ---
-                const response = await fetch(`https://vn-infra-protal-1.onrender.com/delete-application/${filename}`, {
-                    method: 'DELETE'
-                });
+                // --- DEPLOYMENT URL ---
+                const response = await fetch(`https://vn-infra-protal-1.onrender.com/delete-application/${filename}`, { method: 'DELETE' });
                 const data = await response.json();
                 if (!response.ok) { throw new Error(data.error || 'Could not delete application'); }
-                rowElement.remove();
+                
+                applicationsData = applicationsData.filter(app => app.filename !== filename);
+                displayApplications();
+                loadAnalytics(); 
+                
                 alert('Application deleted successfully.');
             } catch (error) {
                 alert('Error deleting: ' + error.message);
             }
         }
 
+        // --- Display Applications ---
+        function displayApplications() {
+            appListBody.innerHTML = ''; 
+            let filteredApps = applicationsData;
+            if (currentFilter !== 'All') {
+                filteredApps = applicationsData.filter(app => app.status === currentFilter);
+            }
+            
+            if (currentSort === 'score') {
+                filteredApps.sort((a, b) => b.score - a.score);
+            } else {
+                filteredApps.sort((a, b) => b.id - a.id);
+            }
+
+            if (filteredApps.length === 0) {
+                appListBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No applications found.</td></tr>';
+                return;
+            }
+
+            filteredApps.forEach((app) => {
+                const row = document.createElement('tr');
+                const statusClassMap = {
+                    'Shortlisted': 'status-shortlisted', 'Pending': 'status-pending',
+                    'Interviewing': 'status-interviewing', 'Rejected': 'status-rejected', 'Hired': 'status-hired'
+                };
+                const statusClass = statusClassMap[app.status] || 'status-pending';
+                
+                const nameCell = document.createElement('td');
+                const nameLink = document.createElement('a');
+                nameLink.textContent = app.name;
+                nameLink.className = 'clickable-name';
+                nameLink.href = '#';
+                nameLink.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    showDetails(app); 
+                });
+                nameCell.appendChild(nameLink);
+                row.appendChild(nameCell);
+
+                const emailCell = document.createElement('td');
+                emailCell.textContent = app.email;
+                row.appendChild(emailCell);
+
+                const jobCell = document.createElement('td');
+                jobCell.textContent = app.jobTitle || 'N/A';
+                row.appendChild(jobCell);
+                
+                const scoreCell = document.createElement('td');
+                scoreCell.innerHTML = `<b>${app.score}%</b>`;
+                row.appendChild(scoreCell);
+                
+                const statusCell = document.createElement('td');
+                statusCell.className = statusClass;
+                statusCell.textContent = app.status;
+                row.appendChild(statusCell);
+                
+                const downloadCell = document.createElement('td');
+                const downloadLink = document.createElement('a');
+                // --- DEPLOYMENT URL ---
+                downloadLink.href = `https://vn-infra-protal-1.onrender.com/download-application/${app.filename}`;
+                downloadLink.target = '_blank';
+                downloadLink.textContent = 'Download';
+                downloadCell.appendChild(downloadLink);
+                row.appendChild(downloadCell);
+                
+                const deleteCell = document.createElement('td');
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = 'Delete';
+                deleteButton.className = 'btn-delete';
+                deleteButton.onclick = () => {
+                    deleteApplication(app.filename, app.name, row);
+                };
+                deleteCell.appendChild(deleteButton);
+                row.appendChild(deleteCell);
+
+                appListBody.appendChild(row);
+            });
+        }
+        
+        // --- Load Applications ---
         async function loadApplications() {
             badge.style.display = 'none';
             badge.style.animation = 'none';
-
             try {
-                // --- URL for Deployment ---
+                // --- DEPLOYMENT URL ---
                 const response = await fetch('https://vn-infra-protal-1.onrender.com/get-applications');
                 const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(data.error || 'Could not load applications');
-                }
+                if (!response.ok) { throw new Error(data.error || 'Could not load applications'); }
                 
-                appListBody.innerHTML = ''; 
-
-                if (data.applications.length === 0) {
-                    appListBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No applications found.</td></tr>';
-                    return;
-                }
-
-                data.applications.forEach(app => {
-                    const row = document.createElement('tr');
-                    const statusClass = app.status === 'Shortlisted' ? 'status-shortlisted' : 'status-pending';
-                    row.innerHTML = `
-                        <td>${app.name}</td>
-                        <td>${app.email}</td>
-                        <td>${app.jobTitle}</td>
-                        <td><b>${app.score}%</b></td>
-                        <td class="${statusClass}">${app.status}</td>
-                        <td>
-                            <a href="https://vn-infra-protal-1.onrender.com/download-application/${app.filename}" target="_blank">
-                                Download
-                            </a>
-                        </td>
-                    `;
-                    const deleteCell = document.createElement('td');
-                    const deleteButton = document.createElement('button');
-                    deleteButton.textContent = 'Delete';
-                    deleteButton.className = 'btn-delete';
-                    deleteButton.onclick = () => {
-                        deleteApplication(app.filename, app.name, row);
-                    };
-                    deleteCell.appendChild(deleteButton);
-                    row.appendChild(deleteCell);
-                    appListBody.appendChild(row);
-                });
-
+                applicationsData = data.applications; 
+                displayApplications(); 
             } catch (error) {
                 console.error('Error loading applications:', error);
                 appListBody.innerHTML = `<tr><td colspan="7" style="color: red;">${error.message}</td></tr>`;
@@ -197,10 +411,172 @@
         
         loadButton.addEventListener('click', loadApplications);
         
-        // Notification Badge Script
-        document.addEventListener('DOMContentLoaded', async () => {
+        // --- Status Update Form ---
+        statusUpdateForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newStatus = statusSelect.value;
+            if (!currentAppId) return; 
+            
             try {
-                // --- URL for Deployment ---
+                // --- DEPLOYMENT URL ---
+                const response = await fetch('https://vn-infra-protal-1.onrender.com/update-status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: currentAppId, status: newStatus })
+                });
+                const data = await response.json();
+                if (!response.ok) { throw new Error(data.error || 'Failed to update status'); }
+                
+                const appToUpdate = applicationsData.find(app => app.id === currentAppId);
+                if (appToUpdate) {
+                    appToUpdate.status = newStatus;
+                }
+                displayApplications();
+                loadAnalytics(); 
+                
+                alert('Status updated successfully!');
+                closeModal();
+                
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        });
+        
+        // --- Notes Update Form ---
+        noteUpdateForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newNotes = noteInput.value;
+            if (currentAppId === null) return;
+            noteSaveStatus.style.visibility = 'hidden';
+            try {
+                // --- DEPLOYMENT URL ---
+                const response = await fetch('https://vn-infra-protal-1.onrender.com/update-notes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: currentAppId, notes: newNotes })
+                });
+                const data = await response.json();
+                if (!response.ok) { throw new Error(data.error || 'Failed to save note'); }
+                
+                const appToUpdate = applicationsData.find(app => app.id === currentAppId);
+                if (appToUpdate) {
+                    appToUpdate.notes = newNotes;
+                }
+                
+                noteSaveStatus.style.visibility = 'visible';
+                setTimeout(() => {
+                    noteSaveStatus.style.visibility = 'hidden';
+                }, 2000);
+            } catch (error) {
+                alert('Error saving note: ' + error.message);
+            }
+        });
+        
+        // --- Filter/Sort Event Listeners ---
+        filterBar.addEventListener('click', (e) => {
+            if (e.target.classList.contains('btn-filter')) {
+                filterBar.querySelectorAll('.btn-filter[data-filter]').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                
+                if (e.target.id === 'sort-by-score') {
+                    currentSort = 'score';
+                    e.target.textContent = 'Sort by Date (Newest)';
+                    e.target.id = 'sort-by-date';
+                } else if (e.target.id === 'sort-by-date') {
+                    currentSort = 'default';
+                    e.target.textContent = 'Sort by Score (High to Low)';
+                    e.target.id = 'sort-by-score';
+                } else {
+                    currentFilter = e.target.dataset.filter;
+                    e.target.classList.add('active');
+                }
+                
+                displayApplications();
+            }
+        });
+        
+        // --- Function to load analytics ---
+        async function loadAnalytics() {
+            try {
+                // --- DEPLOYMENT URL ---
+                const response = await fetch('https://vn-infra-protal-1.onrender.com/get-analytics');
+                const data = await response.json();
+                if (!response.ok) { throw new Error(data.error); }
+                
+                document.getElementById('stat-total-apps').textContent = data.total_apps;
+                document.getElementById('stat-total-shortlisted').textContent = data.total_shortlisted;
+                document.getElementById('stat-avg-score').textContent = `${data.avg_score}%`;
+                
+            } catch (error) {
+                console.error('Error loading analytics:', error);
+            }
+        }
+        
+        // --- Job Management Scripts ---
+        async function loadJobs() {
+            jobList.innerHTML = '<p>Loading...</p>';
+            try {
+                // --- DEPLOYMENT URL ---
+                const response = await fetch('https://vn-infra-protal-1.onrender.com/get-jobs');
+                const data = await response.json();
+                if (!response.ok) { throw new Error(data.error); }
+                
+                jobList.innerHTML = ''; 
+                if (data.jobs.length === 0) {
+                    jobList.innerHTML = '<p>No jobs posted yet.</p>';
+                    return;
+                }
+                
+                data.jobs.forEach(job => {
+                    const li = document.createElement('li');
+                    li.className = 'job-list-item';
+                    li.innerHTML = `
+                        <h4>${job.title}</h4>
+                        <p>${job.description}</p>
+                    `;
+                    jobList.appendChild(li);
+                });
+                
+            } catch(error) {
+                jobList.innerHTML = `<p class="status-error">Error: ${error.message}</p>`;
+            }
+        }
+        
+        addJobForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const title = jobTitleInput.value;
+            const description = jobDescInput.value;
+            jobFormStatus.textContent = 'Adding job...';
+            jobFormStatus.className = '';
+            
+            try {
+                // --- DEPLOYMENT URL ---
+                const response = await fetch('https://vn-infra-protal-1.onrender.com/add-job', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, description })
+                });
+                const data = await response.json();
+                if (!response.ok) { throw new Error(data.error); }
+                
+                jobFormStatus.textContent = 'Job added successfully!';
+                jobFormStatus.className = 'status-success';
+                addJobForm.reset();
+                loadJobs(); 
+            } catch(error) {
+                jobFormStatus.textContent = `Error: ${error.message}`;
+                jobFormStatus.className = 'status-error';
+            }
+        });
+        
+        loadJobsButton.addEventListener('click', loadJobs);
+
+        // --- Load all data on page load ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Load notification badge
+            try {
+                // --- DEPLOYMENT URL ---
                 const response = await fetch('https://vn-infra-protal-1.onrender.com/get-applications');
                 const data = await response.json();
                 if (response.ok && data.applications.length > 0) {
@@ -210,7 +586,11 @@
             } catch (error) {
                 console.error('Error fetching notification count:', error);
             }
+            
+            loadJobs(); 
+            loadAnalytics(); 
         });
     </script>
+    
 </body>
 </html>

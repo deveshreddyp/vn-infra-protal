@@ -24,12 +24,10 @@
             box-shadow: var(--shadow);
             border-top: 5px solid var(--primary-blue);
         }
-        
         .login-logo {
             height: 60px;
             margin-bottom: 1.5rem;
         }
-        
         .login-card h1 {
             color: var(--primary-blue);
             margin-bottom: 1.5rem;
@@ -58,21 +56,42 @@
         <form id="login-form">
             <label for="password">Enter Password:</label>
             <input type="password" id="password" required>
-            <button type="submit" class="btn">Login</button>
+            <button type="submit" class="btn" id="login-button">Login</button>
             <p id="error-msg">Incorrect Password</p>
         </form>
     </div>
 
     <script>
-        document.getElementById('login-form').addEventListener('submit', function(event) {
+        const loginForm = document.getElementById('login-form');
+        const passwordInput = document.getElementById('password');
+        const errorMsg = document.getElementById('error-msg');
+        const loginButton = document.getElementById('login-button');
+
+        loginForm.addEventListener('submit', async function(event) {
             event.preventDefault(); 
-            const password = document.getElementById('password').value;
-            const errorMsg = document.getElementById('error-msg');
+            const password = passwordInput.value;
+            errorMsg.style.visibility = 'hidden';
+            loginButton.textContent = 'Checking...';
             
-            if (password === 'deva') {
-                window.location.href = 'recruiter.html';
-            } else {
+            try {
+                // --- DEPLOYMENT URL ---
+                const response = await fetch('https://vn-infra-protal-1.onrender.com/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: password })
+                });
+
+                if (response.ok) {
+                    loginButton.textContent = 'Success!';
+                    window.location.href = 'recruiter.html'; // Redirect
+                } else {
+                    throw new Error('Incorrect Password');
+                }
+                
+            } catch (error) {
+                console.error('Login failed:', error);
                 errorMsg.style.visibility = 'visible';
+                loginButton.textContent = 'Login';
             }
         });
     </script>

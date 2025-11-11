@@ -7,28 +7,15 @@
     <link rel="stylesheet" href="style.css">
     <style>
         #results { margin-top: 2rem; padding: 1rem; }
-        .success {
-            color: #155724;
-            background-color: #d4edda;
-            border: 1px solid #c3e6cb;
-            border-radius: 8px;
-            padding: 1rem;
-        }
-        .error {
-            color: #721c24;
-            background-color: #f8d7da;
-            border: 1px solid #f5c6cb;
-            border-radius: 8px;
-            padding: 1rem;
-        }
-        .apply-card h1 {
-            color: var(--primary-blue);
-        }
-        .apply-card .btn {
-            background-color: #28a745; 
-        }
-        .apply-card .btn:hover {
-            background-color: #218838;
+        .success { color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 1rem; }
+        .error { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 8px; padding: 1rem; }
+        .apply-card h1 { color: var(--primary-blue); }
+        .apply-card .btn { background-color: #28a745; }
+        .apply-card .btn:hover { background-color: #218838; }
+        select {
+            width: 100%; padding: 0.8rem; margin-top: 0.6rem;
+            border: 1px solid #c0c0c0; border-radius: 8px;
+            font-size: 1rem; font-family: inherit; background-color: white;
         }
     </style>
 </head>
@@ -60,10 +47,8 @@
 
                 <label for="job-title">Select Job Position:</label>
                 <select id="job-title" required>
-                    <option value="" disabled selected>-- Choose a position --</option>
-                    <option value="web_developer">Web Developer</option>
-                    <option value="site_engineer">Site Engineer</option>
-                </select>
+                    <option value="" disabled selected>-- Loading positions... --</option>
+                    </select>
 
                 <label for="resume-file">Upload Your Resume (PDF):</label>
                 <input type="file" id="resume-file" accept=".pdf" required>
@@ -78,7 +63,33 @@
     <script>
         const applyForm = document.getElementById('apply-form');
         const resultsDiv = document.getElementById('results');
+        const jobSelect = document.getElementById('job-title');
 
+        // Load jobs when the page opens
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // --- DEPLOYMENT URL ---
+                const response = await fetch('https://vn-infra-protal-1.onrender.com/get-jobs');
+                const data = await response.json();
+                
+                if (!response.ok) { throw new Error(data.error); }
+                
+                jobSelect.innerHTML = '<option value="" disabled selected>-- Choose a position --</option>'; 
+                
+                data.jobs.forEach(job => {
+                    const option = document.createElement('option');
+                    option.value = job.id; 
+                    option.textContent = job.title; 
+                    jobSelect.appendChild(option);
+                });
+                
+            } catch(error) {
+                jobSelect.innerHTML = '<option value="" disabled selected>-- Error loading jobs --</option>';
+                console.error("Error loading jobs:", error);
+            }
+        });
+
+        // Form submit handler
         applyForm.addEventListener('submit', async function(event) {
             event.preventDefault(); 
             resultsDiv.innerHTML = "<p class='text-center'>Submitting... Please wait.</p>";
@@ -86,16 +97,16 @@
             const resumeFile = document.getElementById('resume-file').files[0];
             const name = document.getElementById('name').value;
             const email = document.getElementById('email').value;
-            const jobTitle = document.getElementById('job-title').value; 
+            const jobId = jobSelect.value; 
 
             const formData = new FormData();
             formData.append('resume', resumeFile);
             formData.append('name', name);
             formData.append('email', email);
-            formData.append('jobTitle', jobTitle); 
+            formData.append('jobId', jobId); 
 
             try {
-                // --- URL for Deployment ---
+                // --- DEPLOYMENT URL ---
                 const response = await fetch('https://vn-infra-protal-1.onrender.com/apply', {
                     method: 'POST',
                     body: formData

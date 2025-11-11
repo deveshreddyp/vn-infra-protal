@@ -55,7 +55,7 @@
             formData.append('jobDescription', jdText);
 
             try {
-                // --- URL for Deployment ---
+                // --- DEPLOYMENT URL ---
                 const response = await fetch('https://vn-infra-protal-1.onrender.com/scan-resume', {
                     method: 'POST',
                     body: formData
