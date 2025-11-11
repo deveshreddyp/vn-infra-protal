@@ -4,58 +4,105 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Recruiter Dashboard - VN Infra</title>
-    <link rel="stylesheet" href="style.css">
-    
-    <style>
-        /* This section contains the critical Modal and Table styles for correct rendering */
-        .applications-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
-        .applications-table th, .applications-table td { padding: 0.8rem 1rem; border: 1px solid var(--border-color); text-align: left; vertical-align: middle; }
-        .applications-table th { background-color: #f8f9fa; }
-        .applications-table td { font-size: 0.95rem; }
-        .status-shortlisted { color: #155724; font-weight: 700; background-color: #d4edda; }
-        .status-pending { color: #555; }
-        .status-interviewing { background-color: #fff3cd; color: #664d03; font-weight: 700;}
-        .status-rejected { background-color: #f8d7da; color: #58151c; font-weight: 700;}
-        .status-hired { background-color: #cfe2ff; color: #052c65; font-weight: 700;}
-        .btn-delete { background-color: #dc3545; color: white; padding: 0.3rem 0.6rem; font-size: 0.8rem; border: none; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; }
-        .btn-delete:hover { background-color: #c82333; }
-        #notification-badge { display: none; background-color: var(--accent-orange); color: white; font-size: 0.9rem; font-weight: 700; padding: 2px 9px; border-radius: 50%; margin-left: 10px; vertical-align: middle; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(242, 140, 40, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(242, 140, 40, 0); } 100% { box-shadow: 0 0 0 0 rgba(242, 140, 40, 0); } }
-        .clickable-name { color: var(--primary-blue); font-weight: 600; text-decoration: underline; cursor: pointer; }
-        .clickable-name:hover { color: var(--accent-orange); }
 
-        /* Modal Styles */
-        .modal-backdrop { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); z-index: 2000; opacity: 0; transition: opacity 0.3s ease; }
-        .modal-content { display: none; position: fixed; top: 50%; left: 50%; background-color: var(--light-color); padding: 2.5rem; border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); width: 90%; max-width: 650px; max-height: 80vh; overflow-y: auto; z-index: 2001; opacity: 0; transform: translate(-50%, -45%); transition: all 0.3s ease; text-align: left; }
-        .modal-close { position: absolute; top: 10px; right: 20px; font-size: 2rem; font-weight: bold; color: #aaa; cursor: pointer; }
-        .modal-close:hover { color: var(--dark-color); }
-        body.modal-open .modal-backdrop { display: block; opacity: 1; }
-        body.modal-open .modal-content { display: block; opacity: 1; transform: translate(-50%, -50%); }
-        .modal-content h2 { color: var(--primary-blue); margin-bottom: 1rem; border: none; }
-        .modal-content h3 { font-family: var(--font-heading); color: var(--primary-blue); font-size: 1.2rem; margin-top: 1.5rem; margin-bottom: 0.5rem; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-        .modal-content .skill-list, .modal-content .question-list { list-style-type: disc; margin-left: 20px; padding-left: 5px; }
-        .modal-content .question-list { list-style-type: decimal; }
-        .modal-content .skill-list li, .modal-content .question-list li { font-size: 0.95rem; margin-bottom: 5px; }
-        .action-form { display: flex; gap: 10px; align-items: center; margin-top: 1rem; }
-        .action-form select, .action-form textarea { flex-grow: 1; margin-top: 0; }
-        .action-form button { width: auto; margin-top: 0; font-size: 0.9rem; align-self: flex-start; }
-        #modal-notes { height: 80px; resize: vertical; }
-        #note-save-status { font-size: 0.85rem; color: green; margin-left: 10px; visibility: hidden; }
-        .filter-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 1rem; border-bottom: 2px solid var(--border-color); padding-bottom: 1rem; }
-        .filter-bar .btn-filter { width: auto; margin-top: 0; padding: 0.5rem 1rem; font-size: 0.9rem; background-color: var(--light-color); color: var(--primary-blue); border: 1px solid var(--border-color); cursor: pointer; transition: all 0.2s ease; }
-        .filter-bar .btn-filter:hover { background-color: #f0f2f5; border-color: #ccc; }
-        .filter-bar .btn-filter.active { background-color: var(--primary-blue); color: var(--light-color); border-color: var(--primary-blue); }
-        .job-list { list-style-type: none; padding: 0; margin-top: 1rem; }
-        .job-list-item { background-color: #f8f9fa; padding: 1rem; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 0.75rem; }
-        .job-list-item h4 { font-family: var(--font-heading); color: var(--primary-blue); font-size: 1.1rem; margin-bottom: 0.25rem; }
-        .job-list-item p { font-size: 0.9rem; color: #555; margin-bottom: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        #job-form-status { font-weight: 600; }
-        .status-success { color: green; }
-        .status-error { color: var(--accent-orange); }
-        .stats-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 1rem; }
-        .stat-card { background-color: #f8f9fa; border: 1px solid var(--border-color); border-left: 5px solid var(--primary-blue); border-radius: 8px; padding: 1.5rem; text-align: center; }
-        .stat-card h4 { font-family: var(--font-heading); font-size: 1.1rem; color: #555; margin-bottom: 0.5rem; font-weight: 600; }
-        .stat-card .stat-number { font-size: 2.5rem; font-weight: 700; color: var(--primary-blue); }
+    <!-- Google Font (used for headings/body to match the sample) -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root{
+            --primary-blue:#0b3b75; /* deep header blue */
+            --accent-orange:#f28c28; /* orange accent from image */
+            --light-bg:#f2f4f7; /* page background */
+            --card-bg:#ffffff;
+            --border-color:#e6e8eb;
+            --muted:#6c757d;
+            --success:#155724;
+            --danger:#dc3545;
+            --font-sans: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+        }
+
+        /* Global reset-ish */
+        *{box-sizing: border-box}
+        html,body{height:100%;margin:0;background:linear-gradient(#111, #111) no-repeat, var(--light-bg);font-family:var(--font-sans);-webkit-font-smoothing:antialiased}
+
+        /* Very narrow centered page like the screenshot */
+        .page-container{max-width:900px;margin:22px auto;padding:0 18px 60px}
+
+        /* Header */
+        .header{background:var(--primary-blue);color:#fff;border-radius:4px 4px 0 0;box-shadow:0 2px 0 rgba(0,0,0,0.25)}
+        .navbar{display:flex;align-items:center;justify-content:space-between;padding:10px 18px}
+        .nav-brand{display:flex;align-items:center;gap:12px;color:#fff;text-decoration:none;font-weight:700}
+        .nav-brand img{height:34px;width:34px;border-radius:4px;object-fit:cover}
+        .nav-link{color:#fff;text-decoration:none;background:rgba(255,255,255,0.06);padding:6px 12px;border-radius:4px;font-size:0.95rem}
+        .nav-link:hover{opacity:0.95}
+
+        /* Card style matching the image (rounded with orange top trim) */
+        .card{background:var(--card-bg);border-radius:10px;padding:22px;border:1px solid var(--border-color);box-shadow:0 6px 18px rgba(16,24,40,0.06);margin-top:20px;position:relative}
+        /* small orange rounded bar at top-left of card like image */
+        .card::before{content:'';position:absolute;left:18px;top:-8px;height:8px;width:45%;border-radius:10px;background:linear-gradient(90deg,var(--accent-orange),#ffb66b);box-shadow:0 2px 0 rgba(0,0,0,0.06)}
+        .card h2{color:var(--primary-blue);font-size:1.35rem;margin:0 0 12px;font-weight:700}
+
+        /* stats area */
+        .stats-container{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+        .stat-card{background:#fafbfc;border-radius:8px;padding:18px;border:1px solid var(--border-color);text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:110px}
+        .stat-card h4{font-size:0.95rem;color:#5a6774;margin:0 0 10px;font-weight:600}
+        .stat-number{font-size:2rem;color:var(--primary-blue);font-weight:800}
+        .stat-card.left{border-left:6px solid var(--primary-blue)}
+        .stat-card.mid{border-left:6px solid #155724}
+        .stat-card.right{border-left:6px solid var(--accent-orange)}
+
+        /* Form elements */
+        form label{display:block;color:var(--muted);font-size:0.95rem;margin:10px 0 6px}
+        input[type='file'], input[type='text'], textarea{width:100%;padding:10px;border-radius:6px;border:1px solid var(--border-color);background:#fff;font-size:0.95rem}
+        textarea{min-height:120px;resize:vertical}
+
+        /* Buttons */
+        .btn{display:inline-block;background:var(--accent-orange);color:#fff;border:none;padding:12px 18px;border-radius:6px;font-weight:700;cursor:pointer;margin-top:14px;width:100%}
+        .btn:hover{filter:brightness(.97)}
+        .btn.btn-secondary{background:#2f4f86;color:#fff;padding:8px 12px;border-radius:6px;font-weight:600}
+
+        /* Applications section */
+        .filter-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px}
+        .btn-filter{padding:8px 12px;border-radius:6px;border:1px solid var(--border-color);background:transparent;cursor:pointer;font-weight:600;color:var(--muted)}
+        .btn-filter.active{background:var(--primary-blue);color:#fff;border-color:var(--primary-blue)}
+
+        .applications-table{width:100%;border-collapse:collapse;margin-top:10px}
+        .applications-table th, .applications-table td{padding:12px 10px;border:1px solid var(--border-color);font-size:0.95rem;background:#fff}
+        .applications-table thead th{background:#f6f7f9;color:var(--muted);font-weight:700}
+
+        /* status pill styles (kept identical to original, but polished) */
+        .status-shortlisted{color:var(--success);font-weight:700;background:#e9f7ec;padding:6px 8px;border-radius:6px;display:inline-block}
+        .status-pending{color:#555;padding:6px 8px;border-radius:6px;display:inline-block}
+        .status-interviewing{background:#fff3cd;color:#664d03;padding:6px 8px;border-radius:6px;display:inline-block}
+        .status-rejected{background:#f8d7da;color:#58151c;padding:6px 8px;border-radius:6px;display:inline-block}
+        .status-hired{background:#cfe2ff;color:#052c65;padding:6px 8px;border-radius:6px;display:inline-block}
+
+        .clickable-name{color:var(--primary-blue);font-weight:700;text-decoration:underline;cursor:pointer}
+
+        /* Modal polished (keeps ids/classes the JS expects) */
+        .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:2000;opacity:0;transition:opacity .25s}
+        .modal-content{display:none;position:fixed;left:50%;top:50%;transform:translate(-50%,-45%);background:var(--card-bg);padding:22px;border-radius:12px;box-shadow:0 20px 40px rgba(8,15,50,0.25);z-index:2001;width:92%;max-width:760px;max-height:86vh;overflow:auto}
+        .modal-close{position:absolute;right:18px;top:12px;font-size:1.6rem;color:#777;cursor:pointer}
+        body.modal-open .modal-backdrop{display:block;opacity:1}
+        body.modal-open .modal-content{display:block;transform:translate(-50%,-50%)}
+
+        /* Job list */
+        .job-list{list-style:none;padding:0;margin:0}
+        .job-list-item{background:#fafbfc;border:1px solid var(--border-color);padding:12px;border-radius:8px;margin-bottom:10px}
+        .job-list-item h4{margin:0;color:var(--primary-blue)}
+
+        /* small utility */
+        .muted{color:var(--muted)}
+        .hidden{display:none}
+
+        /* Responsive tweaks */
+        @media (max-width:720px){
+            .stats-container{grid-template-columns:1fr}
+            .page-container{padding:0 12px}
+            .card::before{left:14px;width:36%}
+        }
+
+        /* keep the exact element IDs / classnames used by JS untouched */
     </style>
 </head>
 <body>
@@ -64,7 +111,7 @@
         <nav class="navbar">
             <a href="index.html" class="nav-brand">
                 <img src="vn.jpg" alt="VN Infra Reyality Logo">
-                VN Infra Reyality
+                <span style="letter-spacing:0.2px">VN Infra Reyality</span>
             </a>
             <div class="nav-links">
                 <a href="index.html" class="nav-link">Back to Portal</a>
@@ -73,21 +120,22 @@
     </header>
 
     <main class="page-container">
-    
+        <!-- NOTE: Original IDs and structure preserved so all JS continues to work. Only visual/CSS changes applied. -->
+
         <div class="card">
             <h2>At-a-Glance</h2>
             <div class="stats-container">
-                <div class="stat-card">
+                <div class="stat-card left">
                     <h4>Total Applications</h4>
-                    <p class="stat-number" id="stat-total-apps">0</p>
+                    <div class="stat-number" id="stat-total-apps">0</div>
                 </div>
-                <div class="stat-card" style="border-left-color: #155724;">
+                <div class="stat-card mid">
                     <h4>Total Shortlisted</h4>
-                    <p class="stat-number" id="stat-total-shortlisted">0</p>
+                    <div class="stat-number" id="stat-total-shortlisted">0</div>
                 </div>
-                <div class="stat-card" style="border-left-color: var(--accent-orange);">
+                <div class="stat-card right">
                     <h4>Average Score</h4>
-                    <p class="stat-number" id="stat-avg-score">0%</p>
+                    <div class="stat-number" id="stat-avg-score">0%</div>
                 </div>
             </div>
         </div>
@@ -97,29 +145,31 @@
             <form id="scan-form">
                 <label for="resume-file">Upload Candidate's Resume:</label>
                 <input type="file" id="resume-file" accept=".pdf" required>
+
                 <label for="jd-text">Paste Job Description:</label>
                 <textarea id="jd-text" placeholder="Paste the full job description here..." required></textarea>
+
                 <button type="submit" class="btn">Scan Resume</button>
             </form>
-            <div id="results"></div>
+            <div id="results" style="margin-top:14px"></div>
         </div>
 
         <div class="card">
             <h2>Submitted Applications <span id="notification-badge"></span></h2>
-            <button id="load-apps-button" class="btn btn-secondary" style="width: auto;">
-                Load Applications
-            </button>
-            <div class="filter-bar" style="margin-top: 1.5rem;">
-                <span>Filter by:</span>
+            <button id="load-apps-button" class="btn btn-secondary" style="width:auto">Load Applications</button>
+
+            <div class="filter-bar" style="margin-top:14px">
+                <span class="muted">Filter by:</span>
                 <button class="btn-filter active" data-filter="All">All</button>
                 <button class="btn-filter" data-filter="Shortlisted">Shortlisted</button>
                 <button class="btn-filter" data-filter="Pending">Pending</button>
                 <button class="btn-filter" data-filter="Interviewing">Interviewing</button>
                 <button class="btn-filter" data-filter="Rejected">Rejected</button>
-                <span style="margin-left: auto;">Sort by:</span>
+                <span style="margin-left:auto" class="muted">Sort by:</span>
                 <button id="sort-by-score" class="btn-filter">Score (High to Low)</button>
             </div>
-            <div style="overflow-x: auto;">
+
+            <div style="overflow-x:auto;margin-top:12px">
                 <table class="applications-table">
                     <thead>
                         <tr>
@@ -129,42 +179,46 @@
                             <th>Score</th>
                             <th>Status</th>
                             <th>Resume</th>
-                            <th>Action</th> 
+                            <th>Action</th>
                         </tr>
                     </thead>
-                    <tbody id="application-list-body">
-                    </tbody>
+                    <tbody id="application-list-body"></tbody>
                 </table>
             </div>
         </div>
-        
+
         <div class="card">
             <h2>Manage Job Postings</h2>
-            <p>Add new job roles here. They will automatically appear on the "Apply for a Job" page.</p>
+            <p class="muted">Add new job roles here. They will automatically appear on the "Apply for a Job" page.</p>
             <form id="add-job-form">
                 <label for="job-title">New Job Title:</label>
                 <input type="text" id="job-title-input" placeholder="e.g., Project Manager" required>
+
                 <label for="job-description">Job Description:</label>
                 <textarea id="job-description-input" placeholder="Paste the full job description here..." required></textarea>
+
                 <button type="submit" class="btn">Add New Job</button>
-                <p id="job-form-status" style="margin-top: 1rem;"></p>
+                <p id="job-form-status" style="margin-top:12px"></p>
             </form>
-            <h3 style="margin-top: 2rem;">Current Live Jobs</h3>
-            <button id="load-jobs-button" class="btn btn-secondary" style="width: auto; margin-top: 0.5rem;">Refresh Job List</button>
-            <div id="job-list-container">
+
+            <h3 style="margin-top:18px;color:var(--primary-blue)">Current Live Jobs</h3>
+            <button id="load-jobs-button" class="btn btn-secondary" style="width:auto;margin-top:8px">Refresh Job List</button>
+            <div id="job-list-container" style="margin-top:12px">
                 <ul class="job-list" id="job-list"></ul>
             </div>
         </div>
-        
+
     </main>
-    
+
+    <!-- Modal (structure unchanged) -->
     <div class="modal-backdrop" id="modal-backdrop"></div>
     <div class="modal-content" id="details-modal">
         <span class="modal-close" id="modal-close-button">&times;</span>
         <h2 id="modal-name">Candidate Details</h2>
-        <div class="summary" id="modal-summary" style="margin-top: 0;"></div>
-        <h3>Update Status</h3>
-        <form class="action-form" id="status-update-form">
+        <div class="summary" id="modal-summary" style="margin-top:0"></div>
+
+        <h3 style="margin-top:14px;color:var(--primary-blue)">Update Status</h3>
+        <form class="action-form" id="status-update-form" style="display:flex;gap:10px;align-items:center;margin-top:8px">
             <select id="status-select">
                 <option value="Pending">Pending</option>
                 <option value="Shortlisted">Shortlisted</option>
@@ -174,20 +228,25 @@
             </select>
             <button type="submit" class="btn btn-secondary">Update</button>
         </form>
-        <h3>Recruiter Notes</h3>
-        <form class="action-form" id="note-update-form">
-            <textarea id="modal-notes" placeholder="Add private notes here..."></textarea>
+
+        <h3 style="margin-top:14px;color:var(--primary-blue)">Recruiter Notes</h3>
+        <form class="action-form" id="note-update-form" style="display:flex;gap:10px;align-items:flex-start;margin-top:8px">
+            <textarea id="modal-notes" placeholder="Add private notes here..." style="flex:1;min-height:80px"></textarea>
             <button type="submit" class="btn btn-secondary">Save Note</button>
         </form>
         <span id="note-save-status">Note saved!</span>
-        <h3>Matching Skills</h3>
+
+        <h3 style="margin-top:14px;color:var(--primary-blue)">Matching Skills</h3>
         <ul class="skill-list" id="modal-matching-skills"></ul>
-        <h3>Missing Skills</h3>
+
+        <h3 style="margin-top:10px;color:var(--primary-blue)">Missing Skills</h3>
         <ul class="skill-list" id="modal-missing-skills"></ul>
-        <h3>AI-Generated Interview Questions</h3>
+
+        <h3 style="margin-top:10px;color:var(--primary-blue)">AI-Generated Interview Questions</h3>
         <ol class="question-list" id="modal-interview-questions"></ol>
     </div>
 
+    <!-- Keep original JS intact (only placed below so CSS changes apply). No logic was altered. -->
     <script>
         const scanForm = document.getElementById('scan-form');
         const resultsDiv = document.getElementById('results');
@@ -217,7 +276,7 @@
             }
         });
     </script>
-    
+
     <script>
         // --- All elements ---
         const loadButton = document.getElementById('load-apps-button');
@@ -590,6 +649,6 @@
             loadAnalytics(); 
         });
     </script>
-    
+
 </body>
 </html>
