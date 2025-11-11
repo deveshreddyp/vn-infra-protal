@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apply - VN Infra Reyality</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        #results { margin-top: 2rem; padding: 1rem; }
+        .success { color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 1rem; }
+        .error { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 8px; padding: 1rem; }
+        .apply-card h1 { color: var(--primary-blue); }
+        .apply-card .btn { background-color: #28a745; }
+        .apply-card .btn:hover { background-color: #218838; }
+        
+        /* Style for the new select dropdown */
+        select {
+            width: 100%;
+            padding: 0.8rem;
+            margin-top: 0.6rem;
+            border: 1px solid #c0c0c0;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+            background-color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <nav class="navbar">
+            <a href="home.html" class="nav-brand">
+                <img src="vn.jpg" alt="VN Infra Reyality Logo">
+                VN Infra Reyality
+            </a>
+            <div class="nav-links">
+                <a href="home.html" class="nav-link">Back to Portal</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="page-container" style="max-width: 800px;">
+        <div class="card apply-card">
+            <h1 class="text-center">Apply for a Job</h1>
+            <p class="text-center mb-2">Submit your application to VN Infra Reyality. Our team will review your details.</p>
+            
+            <form id="apply-form">
+                <label for="name">Full Name:</label>
+                <input type="text" id="name" required>
+                
+                <label for="email">Email Address:</label>
+                <input type="email" id="email" required>
+
+                <label for="job-title">Select Job Position:</label>
+                <select id="job-title" required>
+                    <option value="" disabled selected>-- Choose a position --</option>
+                    <option value="web_developer">Web Developer</option>
+                    <option value="site_engineer">Site Engineer</option>
+                </select>
+                <label for="resume-file">Upload Your Resume (PDF):</label>
+                <input type="file" id="resume-file" accept=".pdf" required>
+
+                <button type="submit" class="btn">Submit Application</button>
+            </form>
+
+            <div id="results"></div>
+        </div>
+    </main>
+
+    <script>
+        const applyForm = document.getElementById('apply-form');
+        const resultsDiv = document.getElementById('results');
+
+        applyForm.addEventListener('submit', async function(event) {
+            event.preventDefault(); 
+            resultsDiv.innerHTML = "<p class='text-center'>Submitting... Please wait.</p>";
+
+            const resumeFile = document.getElementById('resume-file').files[0];
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const jobTitle = document.getElementById('job-title').value; // Get the job title
+
+            const formData = new FormData();
+            formData.append('resume', resumeFile);
+            formData.append('name', name);
+            formData.append('email', email);
+            formData.append('jobTitle', jobTitle); // Add it to the form data
+
+            try {
+                const response = await fetch('http://127.0.0.1:5000/apply', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (!response.ok) { throw new Error(data.error || 'Network response was not ok'); }
+
+                resultsDiv.innerHTML = `<p class="success text-center">${data.message}</p>`;
+                applyForm.reset(); 
+
+            } catch (error) {
+                console.error('Error:', error);
+                resultsDiv.innerHTML = `<p class="error text-center"><b>Error:</b> ${error.message}</p>`;
+            }
+        });
+    </script>
+</body>
+</html>

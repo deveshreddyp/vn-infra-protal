@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Match Checker - VN Infra</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header class="header">
+        <nav class="navbar">
+            <a href="home.html" class="nav-brand">
+                <img src="vn.jpg" alt="VN Infra Reyality Logo">
+                VN Infra Reyality
+            </a>
+            <div class="nav-links">
+                <a href="home.html" class="nav-link">Back to Portal</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="page-container">
+        <div class="card">
+            <h1 class="text-center">Resume Match Checker</h1>
+            <p class="text-center mb-2">See how well your resume aligns with a job description.</p>
+            
+            <form id="scan-form">
+                <label for="resume-file">Upload Your Resume:</label>
+                <input type="file" id="resume-file" accept=".pdf" required>
+
+                <label for="jd-text">Paste Job Description:</label>
+                <textarea id="jd-text" placeholder="Paste the full job description here..." required></textarea>
+
+                <button type="submit" class="btn">Check My Match Score</button>
+            </form>
+
+            <div id="results"></div>
+        </div>
+    </main>
+
+    <script>
+        const scanForm = document.getElementById('scan-form');
+        const resultsDiv = document.getElementById('results');
+
+        scanForm.addEventListener('submit', async function(event) {
+            event.preventDefault(); 
+            resultsDiv.innerHTML = "<p class='text-center'>Analyzing... The AI is reading your resume...</p>";
+
+            const resumeFile = document.getElementById('resume-file').files[0];
+            const jdText = document.getElementById('jd-text').value;
+
+            const formData = new FormData();
+            formData.append('resume', resumeFile);
+            formData.append('jobDescription', jdText);
+
+            try {
+                const response = await fetch('http://127.0.0.1:5000/scan-resume', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (!response.ok) { throw new Error(data.error || 'Network response was not ok'); }
+
+                resultsDiv.innerHTML = `
+                    <h2>Match Score: ${data.matchScore}%</h2>
+                    <p><strong>Candidate:</strong> ${data.candidateName}</p>
+                    <p><strong>Email:</strong> ${data.candidateEmail}</p>
+                    <div class="summary">
+                        <strong>AI Summary:</strong>
+                        <p>${data.summary}</p>
+                    </div>
+                    <p><strong>Matching Skills:</strong> ${data.matchingSkills.join(', ')}</p>
+                    <p><strong>Missing Skills from JD:</strong> ${data.missingSkills.join(', ')}</p>
+                `;
+            } catch (error) {
+                console.error('Error:', error);
+                resultsDiv.innerHTML = `<p class='error'><b>Error:</b> ${error.message}</p>`;
+            }
+        });
+    </script>
+
+</body>
+</html>

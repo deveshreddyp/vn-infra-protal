@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recruiter Login - VN Infra</title>
+    <link rel="stylesheet" href="style.css">
+    
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding-top: 0;
+        }
+        .login-card {
+            text-align: center;
+            width: 90%;
+            max-width: 450px;
+            padding: 2.5rem;
+            background-color: var(--light-color);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            border-top: 5px solid var(--primary-blue);
+        }
+        
+        /* --- NEW: Style for the logo --- */
+        .login-logo {
+            height: 60px; /* Set logo height */
+            margin-bottom: 1.5rem;
+        }
+        
+        .login-card h1 {
+            color: var(--primary-blue);
+            margin-bottom: 1.5rem;
+        }
+        #error-msg {
+            color: var(--accent-orange);
+            margin-top: 1rem;
+            visibility: hidden;
+            font-weight: 600;
+        }
+        .login-card .btn {
+            background-color: var(--primary-blue);
+        }
+        .login-card .btn:hover {
+            background-color: #1e3a75;
+            box-shadow: 0 5px 15px rgba(35, 71, 137, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+    
+        <img src="vn.jpg" alt="VN Infra Reyality Logo" class="login-logo">
+        
+        <h1>Recruiter Login</h1>
+        <form id="login-form">
+            <label for="password">Enter Password:</label>
+            <input type="password" id="password" required>
+            <button type="submit" class="btn">Login</button>
+            <p id="error-msg">Incorrect Password</p>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('login-form').addEventListener('submit', function(event) {
+            event.preventDefault(); 
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('error-msg');
+            
+            if (password === 'deva') {
+                window.location.href = 'recruiter.html';
+            } else {
+                errorMsg.style.visibility = 'visible';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recruiter Dashboard - VN Infra</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* --- STYLES for the application table --- */
+        .applications-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
+        .applications-table th, .applications-table td { padding: 0.8rem 1rem; border: 1px solid var(--border-color); text-align: left; vertical-align: middle; }
+        .applications-table th { background-color: #f8f9fa; }
+        .applications-table td { font-size: 0.95rem; }
+        .status-shortlisted { color: #155724; font-weight: 700; background-color: #d4edda; }
+        .status-pending { color: #555; }
+        .btn-delete { background-color: #dc3545; color: white; padding: 0.3rem 0.6rem; font-size: 0.8rem; border: none; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; }
+        .btn-delete:hover { background-color: #c82333; }
+
+        /* --- NEW: Style for the notification badge --- */
+        #notification-badge {
+            display: none; /* Hidden by default */
+            background-color: var(--accent-orange); /* Brand orange */
+            color: white;
+            font-size: 0.9rem;
+            font-weight: 700;
+            padding: 2px 9px; /* Makes it circular */
+            border-radius: 50%;
+            margin-left: 10px;
+            vertical-align: middle; /* Aligns with the text */
+            animation: pulse 1.5s infinite;
+        }
+        
+        /* Pulse animation to draw attention */
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(242, 140, 40, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(242, 140, 40, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(242, 140, 40, 0); }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <nav class="navbar">
+            <a href="home.html" class="nav-brand">
+                <img src="vn.jpg" alt="VN Infra Reyality Logo">
+                VN Infra Reyality
+            </a>
+            <div class="nav-links">
+                <a href="home.html" class="nav-link">Back to Portal</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="page-container">
+
+        <div class="card">
+            <h2>AI Resume Scanner</h2>
+            <form id="scan-form">
+                <label for="resume-file">Upload Candidate's Resume:</label>
+                <input type="file" id="resume-file" accept=".pdf" required>
+                <label for="jd-text">Paste Job Description:</label>
+                <textarea id="jd-text" placeholder="Paste the full job description here..." required></textarea>
+                <button type="submit" class="btn">Scan Resume</button>
+            </form>
+            <div id="results"></div>
+        </div>
+
+        <div class="card">
+            <h2>Submitted Applications <span id="notification-badge"></span></h2>
+            
+            <button id="load-apps-button" class="btn btn-secondary" style="width: auto;">
+                Load Applications
+            </button>
+            
+            <div style="overflow-x: auto;">
+                <table class="applications-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Job</th>
+                            <th>Score</th>
+                            <th>Status</th>
+                            <th>Resume</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="application-list-body">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const scanForm = document.getElementById('scan-form');
+        // ... (rest of scanner JS is unchanged) ...
+        const resultsDiv = document.getElementById('results');
+        scanForm.addEventListener('submit', async function(event) {
+            event.preventDefault(); 
+            resultsDiv.innerHTML = "<p>Scanning... The AI is analyzing the documents...</p>";
+            const resumeFile = document.getElementById('resume-file').files[0];
+            const jdText = document.getElementById('jd-text').value;
+            const formData = new FormData();
+            formData.append('resume', resumeFile);
+            formData.append('jobDescription', jdText);
+            try {
+                const response = await fetch('http://127.0.0.1:5000/scan-resume', { method: 'POST', body: formData });
+                const data = await response.json();
+                if (!response.ok) { throw new Error(data.error || 'Network response was not ok'); }
+                resultsDiv.innerHTML = `
+                    <h2>Match Score: ${data.matchScore}%</h2>
+                    <p><strong>Candidate:</strong> ${data.candidateName}</p>
+                    <p><strong>Email:</strong> ${data.candidateEmail}</p>
+                    <div class="summary"><strong>AI Summary:</strong><p>${data.summary}</p></div>
+                    <p><strong>Matching Skills:</strong> ${data.matchingSkills.join(', ')}</p>
+                    <p><strong>Missing Skills from JD:</strong> ${data.missingSkills.join(', ')}</p>
+                `;
+            } catch (error) {
+                console.error('Error:', error);
+                resultsDiv.innerHTML = `<p style="color: red;"><b>Error:</b> ${error.message}</p>`;
+            }
+        });
+    </script>
+    
+    <script>
+        const loadButton = document.getElementById('load-apps-button');
+        const appListBody = document.getElementById('application-list-body');
+        const badge = document.getElementById('notification-badge'); // Get the badge
+
+        async function deleteApplication(filename, name, rowElement) {
+            if (!confirm(`Are you sure you want to delete the application for ${name}?`)) {
+                return; 
+            }
+            try {
+                const response = await fetch(`http://127.0.0.1:5000/delete-application/${filename}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                if (!response.ok) { throw new Error(data.error || 'Could not delete application'); }
+                rowElement.remove();
+                alert('Application deleted successfully.');
+            } catch (error) {
+                alert('Error deleting: ' + error.message);
+            }
+        }
+
+        async function loadApplications() {
+            // --- NEW: Hide the badge when the "load" button is clicked ---
+            badge.style.display = 'none';
+            badge.style.animation = 'none'; // Stop pulsing
+            // -----------------------------------------------------------
+
+            try {
+                const response = await fetch('http://127.0.0.1:5000/get-applications');
+                const data = await response.json();
+                if (!response.ok) { throw new Error(data.error || 'Could not load applications'); }
+                appListBody.innerHTML = ''; 
+                if (data.applications.length === 0) {
+                    appListBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No applications found.</td></tr>';
+                    return;
+                }
+                data.applications.forEach(app => {
+                    const row = document.createElement('tr');
+                    const statusClass = app.status === 'Shortlisted' ? 'status-shortlisted' : 'status-pending';
+                    row.innerHTML = `
+                        <td>${app.name}</td>
+                        <td>${app.email}</td>
+                        <td>${app.jobTitle}</td>
+                        <td><b>${app.score}%</b></td>
+                        <td class="${statusClass}">${app.status}</td>
+                        <td>
+                            <a href="http://127.0.0.1:5000/download-application/${app.filename}" target="_blank">
+                                Download
+                            </a>
+                        </td>
+                    `;
+                    const deleteCell = document.createElement('td');
+                    const deleteButton = document.createElement('button');
+                    deleteButton.textContent = 'Delete';
+                    deleteButton.className = 'btn-delete';
+                    deleteButton.onclick = () => {
+                        deleteApplication(app.filename, app.name, row);
+                    };
+                    deleteCell.appendChild(deleteButton);
+                    row.appendChild(deleteCell);
+                    appListBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error loading applications:', error);
+                appListBody.innerHTML = `<tr><td colspan="7" style="color: red;">${error.message}</td></tr>`;
+            }
+        }
+        
+        loadButton.addEventListener('click', loadApplications);
+    </script>
+    
+    <script>
+        // This runs automatically when the page loads
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // 1. Call the API just to get the count
+                const response = await fetch('http://127.0.0.1:5000/get-applications');
+                const data = await response.json();
+
+                if (response.ok && data.applications.length > 0) {
+                    // 2. We have new applications! Show the badge.
+                    badge.textContent = data.applications.length;
+                    badge.style.display = 'inline-block';
+                }
+            } catch (error) {
+                // Don't show a big error, just log it to the console
+                console.error('Error fetching notification count:', error);
+            }
+        });
+    </script>
+    
+</body>
+</html>
