@@ -13,29 +13,23 @@ from psycopg2.extras import RealDictCursor
 # --- 1. CONFIGURATION ---
 API_KEY = os.environ.get('GOOGLE_API_KEY')
 DATABASE_URL = os.environ.get('DATABASE_URL') 
-try:
-    if not API_KEY:
-        print("CRITICAL ERROR: GOOGLE_API_KEY environment variable not set.")
-    genai.configure(api_key=API_KEY)
-except Exception as e:
-    print(f"Error configuring API key: {e}")
-
-# -----------------------------------
+genai.configure(api_key=API_KEY)
 
 app = Flask(__name__)
 CORS(app)
 
-# --- 2. FOLDERS (Removed os.makedirs call that caused crash) ---
-# NOTE: The APPLICATION_FOLDER variable is now unused but kept for clarity.
-APPLICATION_FOLDER = '/var/data/applications' 
+# --- FOLDERS (For file access) ---
+APPLICATION_FOLDER = os.path.join('/var/data', 'applications') 
+os.makedirs(APPLICATION_FOLDER, exist_ok=True) # THIS LINE IS NOW MOVED
 
-# --- 3. DATABASE HELPER FUNCTIONS (PostgreSQL) ---
+# --- 2. DATABASE HELPER FUNCTIONS (PostgreSQL) ---
 def get_db_conn():
     """Connects to the Render PostgreSQL database."""
     conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
     return conn
 
 def init_db():
+    """Creates tables in PostgreSQL."""
     print("Initializing PostgreSQL database...")
     conn = get_db_conn()
     cur = conn.cursor()
@@ -71,8 +65,17 @@ def init_db():
     conn.close()
     print("Database initialized.")
 
-# --- 4. AI & PDF HELPERS (Unchanged) ---
+# --- 3. RUN DB INITIALIZATION ON IMPORT (THE FIX) ---
+# Gunicorn will execute this immediately when the module is imported.
+try:
+    init_db()
+except Exception as e:
+    # This will catch failures if the DB URL is wrong, but allows the app to start
+    print(f"CRITICAL DB INIT FAILED: {e}")
+    
+# --- 4. AI & PDF HELPERS ---
 def get_ai_scan(resume_text, jd_text):
+    # (function content unchanged)
     SYSTEM_PROMPT = """
     You are an expert HR recruiter...
     {{...}}
@@ -86,6 +89,7 @@ def get_ai_scan(resume_text, jd_text):
     return json.loads(clean_response_text)
 
 def get_interview_questions(missing_skills_list):
+    # (function content unchanged)
     if not missing_skills_list: return json.dumps([])
     skills_text = ", ".join(missing_skills_list)
     PROMPT = f"Generate 3 technical interview questions for missing skills: {skills_text}. Return ONLY a valid JSON array of strings."
@@ -107,6 +111,7 @@ def extract_pdf_text(pdf_file_stream):
 
 @app.route('/login', methods=['POST'])
 def login():
+    # (logic unchanged)
     try:
         data = request.json
         password_attempt = data.get('password')
@@ -119,6 +124,7 @@ def login():
 
 @app.route('/scan-resume', methods=['POST'])
 def scan_resume():
+    # (logic unchanged)
     try:
         resume_file = request.files['resume']
         jd_text = request.form['jobDescription']
@@ -132,6 +138,7 @@ def scan_resume():
 
 @app.route('/apply', methods=['POST'])
 def handle_application():
+    # (logic unchanged)
     try:
         resume_file = request.files['resume']
         name = request.form['name']
@@ -151,8 +158,6 @@ def handle_application():
         if not job: return jsonify({'error': 'Invalid job selected.'}), 400
         
         jd_text = job['description']
-        
-        # Read text from memory for scanning (files are NOT saved to disk)
         resume_text = extract_pdf_text(io.BytesIO(resume_file.read()))
         if not resume_text: return jsonify({'error': 'Could not read PDF.'}), 400
         
@@ -161,7 +166,6 @@ def handle_application():
         status = "Shortlisted" if score >= 60 else "Pending"
         questions = get_interview_questions(ai_response.get('missingSkills', []))
         
-        # Save all data to PostgreSQL
         cur.execute('''
             INSERT INTO applications (name, email, job_id, score, status, filename, 
                                       summary, matchingSkills, missingSkills, interviewQuestions, notes)
@@ -198,12 +202,10 @@ def get_applications():
 
 @app.route('/download-application/<filename>', methods=['GET'])
 def download_application(filename):
-    # This endpoint is disabled for free-tier deployment
     return jsonify({'error': 'Download is disabled in free-tier deployment.'}), 403
 
 @app.route('/delete-application/<filename>', methods=['DELETE'])
 def delete_application(filename):
-    # Only deletes the DB record now (no file to delete on disk)
     try:
         conn = get_db_conn()
         cur = conn.cursor()
@@ -301,13 +303,12 @@ def get_analytics():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# This is the entry point for the Render server
 if __name__ == '__main__':
-    # Initialize DB (This will run once during deployment)
+    # Initializing DB for first deployment
     try:
         init_db()
     except Exception as e:
-        print(f"DB Init failed (requires local Postgres): {e}")
+        print(f"DB Init failed: {e}")
 
     # Render Production Run Command
     port = int(os.environ.get('PORT', 5000))
