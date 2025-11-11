@@ -8,27 +8,30 @@ import io
 import json
 from google.generativeai.types import GenerationConfig
 from os import remove as os_remove
-import psycopg2 # Changed from sqlite3
-from psycopg2.extras import RealDictCursor # For clean dictionary results
+import psycopg2 
+from psycopg2.extras import RealDictCursor
 
 # --- 1. CONFIGURATION ---
 API_KEY = os.environ.get('GOOGLE_API_KEY')
-DATABASE_URL = os.environ.get('DATABASE_URL') # Render provides this
-# (Exception handling for API key removed for brevity but is in user's file)
+DATABASE_URL = os.environ.get('DATABASE_URL') 
+try:
+    if not API_KEY:
+        print("CRITICAL ERROR: GOOGLE_API_KEY environment variable not set.")
+    genai.configure(api_key=API_KEY)
+except Exception as e:
+    print(f"Error configuring API key: {e}")
+
+# -----------------------------------
 
 app = Flask(__name__)
 CORS(app)
 
-# --- FOLDERS & NEW DATABASE FILE ---
-# These folders will be created on the Render Persistent Disk
-DATA_DIR = '/var/data'
-DB_NAME = os.path.join(DATA_DIR, 'vn_infra.db') 
-APPLICATION_FOLDER = os.path.join(DATA_DIR, 'applications') 
+# --- FOLDERS (For storing resumes temporarily on ephemeral disk) ---
+APPLICATION_FOLDER = os.path.join('/var/data', 'applications') 
 os.makedirs(APPLICATION_FOLDER, exist_ok=True)
 
-# --- 2. AI SCANNER FUNCTIONS (Unchanged) ---
+# --- 2. AI SCANNER FUNCTIONS ---
 def get_ai_scan(resume_text, jd_text):
-    # (function content unchanged)
     SYSTEM_PROMPT = """
     You are an expert HR recruiter...
     {{
@@ -54,21 +57,14 @@ def get_ai_scan(resume_text, jd_text):
     return json.loads(clean_response_text)
 
 def get_interview_questions(missing_skills_list):
-    # (function content unchanged)
     if not missing_skills_list: return json.dumps([])
     skills_text = ", ".join(missing_skills_list)
-    QUESTION_PROMPT = f"""
-    A job candidate is missing the following skills: {skills_text}.
-    Generate a JSON array of 3 concise, technical interview questions...
-    Example: ["Question 1", "Question 2", "Question 3"]
-    """
+    PROMPT = f"Generate a JSON array of 3 concise, technical interview questions for missing skills: {skills_text}. Return ONLY a valid JSON array of strings."
     model = genai.GenerativeModel('gemini-flash-latest')
-    generation_config = GenerationConfig(temperature=0.5)
-    response = model.generate_content(QUESTION_PROMPT, generation_config=generation_config)
+    response = model.generate_content(PROMPT)
     return response.text.strip()
 
 def extract_pdf_text(pdf_file_stream):
-    # (function content unchanged)
     try:
         pdf_reader = PyPDF2.PdfReader(pdf_file_stream)
         text = ""
@@ -76,7 +72,6 @@ def extract_pdf_text(pdf_file_stream):
             text += page.extract_text()
         return text
     except Exception as e:
-        print(f"Error reading PDF: {e}")
         return None
 
 # --- 3. DATABASE HELPER FUNCTIONS (PostgreSQL) ---
@@ -86,12 +81,10 @@ def get_db_conn():
     return conn
 
 def init_db():
-    """Creates tables in PostgreSQL."""
     print("Initializing PostgreSQL database...")
     conn = get_db_conn()
     cur = conn.cursor()
     
-    # Create Jobs Table (Using SERIAL PRIMARY KEY for Postgres)
     cur.execute('''
         CREATE TABLE IF NOT EXISTS jobs (
             id SERIAL PRIMARY KEY,
@@ -100,7 +93,6 @@ def init_db():
         );
     ''')
     
-    # Create Applications Table
     cur.execute('''
         CREATE TABLE IF NOT EXISTS applications (
             id SERIAL PRIMARY KEY,
@@ -119,17 +111,15 @@ def init_db():
             FOREIGN KEY (job_id) REFERENCES jobs (id)
         );
     ''')
-    
     conn.commit()
     cur.close()
     conn.close()
     print("Database initialized.")
 
-# --- 4. API ENDPOINTS (Updated for Postgres syntax) ---
+# --- 4. API ENDPOINTS ---
 
 @app.route('/login', methods=['POST'])
 def login():
-    # (logic unchanged)
     try:
         data = request.json
         password_attempt = data.get('password')
@@ -138,82 +128,66 @@ def login():
         else:
             return jsonify({'success': False, 'error': 'Incorrect Password'}), 401
     except Exception as e:
-        print("\n" + "="*50 + "\n>>> CRASH REPORT (login) <<<\n")
-        traceback.print_exc() 
         return jsonify({'error': str(e)}), 500
 
 @app.route('/scan-resume', methods=['POST'])
 def scan_resume():
-    # (logic unchanged)
     try:
         resume_file = request.files['resume']
         jd_text = request.form['jobDescription']
-        resume_bytes = io.BytesIO(resume_file.read())
-        resume_text = extract_pdf_text(resume_bytes)
+        resume_text = extract_pdf_text(io.BytesIO(resume_file.read()))
         if not resume_text:
             return jsonify({'error': 'Could not read text from PDF.'}), 400
         ai_response = get_ai_scan(resume_text, jd_text)
         return jsonify(ai_response)
     except Exception as e:
-        print("\n" + "="*50 + "\n>>> CRASH REPORT (scan-resume) <<<\n")
-        traceback.print_exc() 
         return jsonify({'error': str(e)}), 500
 
 @app.route('/apply', methods=['POST'])
 def handle_application():
     try:
         resume_file = request.files['resume']
-        candidate_name = request.form['name']
-        candidate_email = request.form['email']
+        name = request.form['name']
+        email = request.form['email']
         job_id = request.form['jobId']
-        filename = f"{candidate_name.replace(' ', '_')}-{job_id}-{resume_file.filename}"
-        
-        # NOTE: Resume file is NOT saved to disk here, only text is processed in memory.
+        filename = f"{name.replace(' ', '_')}-{job_id}-{resume_file.filename}"
         
         conn = get_db_conn()
         cur = conn.cursor()
         
-        # 1. Check for duplicate filename (database only)
+        # Check for duplicate
         cur.execute("SELECT id FROM applications WHERE filename = %s", (filename,))
         if cur.fetchone():
             return jsonify({'error': 'You have already applied for this job with this resume.'}), 400
             
-        # 2. Get Job Description
         cur.execute("SELECT description FROM jobs WHERE id = %s", (job_id,))
         job = cur.fetchone()
-        if not job:
-            return jsonify({'error': 'Invalid job selected.'}), 400
+        if not job: return jsonify({'error': 'Invalid job selected.'}), 400
         
         jd_text = job['description']
         
-        # 3. Extract text from memory
-        file_stream = io.BytesIO(resume_file.read())
-        resume_text = extract_pdf_text(file_stream)
-        if not resume_text:
-            return jsonify({'error': 'Could not read text from PDF.'}), 400
+        # Read text from memory for scanning
+        resume_text = extract_pdf_text(io.BytesIO(resume_file.read()))
+        if not resume_text: return jsonify({'error': 'Could not read PDF.'}), 400
         
-        # 4. Run AI Scan
         ai_response = get_ai_scan(resume_text, jd_text)
         score = ai_response.get('matchScore', 0)
         status = "Shortlisted" if score >= 60 else "Pending"
         questions = get_interview_questions(ai_response.get('missingSkills', []))
         
-        # 5. Save to PostgreSQL (using %s placeholders)
+        # Save all data to PostgreSQL (using %s placeholders)
         cur.execute('''
             INSERT INTO applications (name, email, job_id, score, status, filename, 
                                       summary, matchingSkills, missingSkills, interviewQuestions, notes)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        ''', (candidate_name, candidate_email, job_id, 
-              score, status, filename, ai_response.get('summary'), 
-              json.dumps(ai_response.get('matchingSkills')),
-              json.dumps(ai_response.get('missingSkills')),
-              questions, ""))
+        ''', (name, email, job_id, score, status, filename, 
+              ai_response.get('summary'), json.dumps(ai_response.get('matchingSkills')),
+              json.dumps(ai_response.get('missingSkills')), questions, ""))
         
         conn.commit()
         cur.close()
         conn.close()
-        print(f"🎉 NEW AUTO-SCANNED APPLICATION: {candidate_name}, Score: {score}, Status: {status}")
-        return jsonify({'message': f'Application for {candidate_name} received! You will be contacted shortly.'})
+        return jsonify({'message': f'Application received for {name}!'})
     except Exception as e:
         print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
@@ -238,7 +212,7 @@ def get_applications():
 
 @app.route('/download-application/<filename>', methods=['GET'])
 def download_application(filename):
-    # This endpoint is now DISABLED in the HTML and should be removed, but kept for legacy:
+    # This endpoint is disabled for free-tier deployment since files are not persistent.
     return jsonify({'error': 'Download is disabled in free-tier deployment.'}), 403
 
 @app.route('/delete-application/<filename>', methods=['DELETE'])
@@ -342,20 +316,12 @@ def get_analytics():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    # We call init_db here for the local environment setup only.
-    # Render's deployment process handles this slightly differently.
-    if os.environ.get('DATABASE_URL') is None:
-        print("\n--- Running in LOCAL (SQLite) Mode ---")
-        # If running locally, we need to ensure the DB is initialized
-        # (This is just for local testing)
-        try:
-            import sqlite3 # Import specifically for this local check
-            init_db()
-        except Exception as e:
-            print(f"Local DB initialization failed: {e}")
-        # Local run command
-        app.run(debug=True, port=5000)
-    else:
-        # Render run command (Production)
-        # This part is handled by gunicorn
-        pass
+    # Initialize DB (This will run once during local testing/setup)
+    try:
+        init_db()
+    except Exception as e:
+        print(f"DB Init failed (requires local Postgres): {e}")
+
+    # Render Production Run Command
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=False, host='0.0.0.0', port=port)
