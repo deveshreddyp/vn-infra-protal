@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
 import traceback
@@ -7,96 +7,148 @@ import PyPDF2
 import io
 import json
 from google.generativeai.types import GenerationConfig
-from os import remove as os_remove
-import psycopg2 
+import psycopg2
 from psycopg2.extras import RealDictCursor
 
-# --- CRITICAL CONFIGURATION ---
+# --- CONFIG ---
 API_KEY = os.environ.get('GOOGLE_API_KEY')
-DATABASE_URL = os.environ.get('DATABASE_URL') 
+DATABASE_URL = os.environ.get('DATABASE_URL')
 genai.configure(api_key=API_KEY)
 
 app = Flask(__name__)
 CORS(app)
 
-# --- FOLDERS (For file access) ---
-APPLICATION_FOLDER = '/var/data/applications' 
+# --- FOLDERS ---
+APPLICATION_FOLDER = os.environ.get('APPLICATION_FOLDER', '/var/data/applications')
+os.makedirs(APPLICATION_FOLDER, exist_ok=True)
 
-# --- 1. DATABASE HELPER FUNCTIONS (PostgreSQL) ---
+
+# --- DB HELPER ---
 def get_db_conn():
-    """Connects to the Render PostgreSQL database."""
-    conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
-    return conn
-# (init_db function removed, now in setup.py)
+    if not DATABASE_URL:
+        raise RuntimeError("DATABASE_URL not configured")
+    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
 
-# --- 2. AI & PDF HELPERS (Unchanged) ---
-# (get_ai_scan, get_interview_questions, extract_pdf_text, extract_pdf_text functions are unchanged)
+# --- PDF + AI HELPERS ---
+def extract_pdf_text(pdf_file_like):
+    """Extract text safely from PDF resumes."""
+    text = ""
+    try:
+        reader = PyPDF2.PdfReader(pdf_file_like)
+        for page in reader.pages:
+            page_text = page.extract_text()
+            if page_text:
+                text += page_text + "\n"
+    except Exception as e:
+        print("extract_pdf_text error:", e)
+    return text.strip()
 
-# --- 3. API ENDPOINTS (All 11 endpoints remain the same) ---
 
+def get_ai_scan(resume_text, job_description):
+    """Analyze resume vs job description using Gemini AI."""
+    try:
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        prompt = f"""
+Compare this resume with the job description and return JSON with:
+summary, matchingSkills (array), missingSkills (array), matchScore (integer 0–100).
+
+Resume:
+{resume_text[:6000]}
+
+Job Description:
+{job_description[:3000]}
+"""
+        response = model.generate_content(prompt, generation_config=GenerationConfig(temperature=0.2))
+        text = response.text or ""
+
+        # Parse JSON output if possible
+        start = text.find("{")
+        if start != -1:
+            try:
+                return json.loads(text[start:])
+            except Exception:
+                pass
+
+        # fallback
+        return {
+            "summary": text[:1000],
+            "matchingSkills": [],
+            "missingSkills": [],
+            "matchScore": 0
+        }
+    except Exception as e:
+        print("AI scan error:", e)
+        return {"summary": "Error scanning resume.", "matchingSkills": [], "missingSkills": [], "matchScore": 0}
+
+
+def get_interview_questions(missing_skills):
+    """Generate interview questions from missing skills."""
+    if not missing_skills:
+        return "No missing skills identified."
+    try:
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        skills = ", ".join(missing_skills)
+        prompt = f"Generate 5 short interview questions to test skills: {skills}"
+        response = model.generate_content(prompt)
+        return response.text.strip()
+    except Exception as e:
+        print("Question generation error:", e)
+        return "Error generating questions."
+
+
+# --- ENDPOINTS ---
 @app.route('/login', methods=['POST'])
 def login():
     try:
-        data = request.json
-        password_attempt = data.get('password')
-        if password_attempt == 'deva':
+        data = request.json or {}
+        if data.get('password') == 'deva':
             return jsonify({'success': True})
-        else:
-            return jsonify({'success': False, 'error': 'Incorrect Password'}), 401
+        return jsonify({'success': False, 'error': 'Incorrect Password'}), 401
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/scan-resume', methods=['POST'])
-def scan_resume():
-    try:
-        resume_file = request.files['resume']
-        jd_text = request.form['jobDescription']
-        resume_text = extract_pdf_text(io.BytesIO(resume_file.read()))
-        if not resume_text:
-            return jsonify({'error': 'Could not read text from PDF.'}), 400
-        ai_response = get_ai_scan(resume_text, jd_text)
-        return jsonify(ai_response)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
 @app.route('/apply', methods=['POST'])
-def handle_application():
+def apply():
     try:
         resume_file = request.files['resume']
         name = request.form['name']
         email = request.form['email']
         job_id = request.form['jobId']
         filename = f"{name.replace(' ', '_')}-{job_id}-{resume_file.filename}"
-        
+
         conn = get_db_conn()
         cur = conn.cursor()
-        
+
         cur.execute("SELECT id FROM applications WHERE filename = %s", (filename,))
         if cur.fetchone():
             return jsonify({'error': 'You have already applied for this job with this resume.'}), 400
-            
+
         cur.execute("SELECT description FROM jobs WHERE id = %s", (job_id,))
         job = cur.fetchone()
-        if not job: return jsonify({'error': 'Invalid job selected.'}), 400
-        
-        jd_text = job['description']
+        if not job:
+            return jsonify({'error': 'Invalid job selected.'}), 400
+
         resume_text = extract_pdf_text(io.BytesIO(resume_file.read()))
-        if not resume_text: return jsonify({'error': 'Could not read PDF.'}), 400
-        
+        if not resume_text:
+            return jsonify({'error': 'Could not read text from PDF.'}), 400
+
         ai_response = get_ai_scan(resume_text, job['description'])
         score = ai_response.get('matchScore', 0)
         status = "Shortlisted" if score >= 60 else "Pending"
         questions = get_interview_questions(ai_response.get('missingSkills', []))
-        
-        cur.execute('''
-            INSERT INTO applications (name, email, job_id, score, status, filename, 
+
+        cur.execute("""
+            INSERT INTO applications (name, email, job_id, score, status, filename,
                                       summary, matchingSkills, missingSkills, interviewQuestions, notes)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        ''', (name, email, job_id, score, status, filename, 
-              ai_response.get('summary'), json.dumps(ai_response.get('matchingSkills')),
-              json.dumps(ai_response.get('missingSkills')), questions, ""))
-        
+        """, (name, email, job_id, score, status, filename,
+              ai_response.get('summary'),
+              json.dumps(ai_response.get('matchingSkills')),
+              json.dumps(ai_response.get('missingSkills')),
+              questions, ""))
+
         conn.commit()
         cur.close()
         conn.close()
@@ -105,79 +157,6 @@ def handle_application():
         print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
-@app.route('/get-applications', methods=['GET'])
-def get_applications():
-    try:
-        conn = get_db_conn()
-        cur = conn.cursor()
-        cur.execute('''
-            SELECT a.*, j.title as "jobTitle" 
-            FROM applications a
-            LEFT JOIN jobs j ON a.job_id = j.id
-            ORDER BY a.id DESC
-        ''')
-        apps = cur.fetchall()
-        cur.close()
-        conn.close()
-        return jsonify({'applications': apps})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/download-application/<filename>', methods=['GET'])
-def download_application(filename):
-    return jsonify({'error': 'Download is disabled in free-tier deployment.'}), 403
-
-@app.route('/delete-application/<filename>', methods=['DELETE'])
-def delete_application(filename):
-    try:
-        conn = get_db_conn()
-        cur = conn.cursor()
-        cur.execute("DELETE FROM applications WHERE filename = %s", (filename,))
-        conn.commit()
-        cur.close()
-        conn.close()
-        return jsonify({'message': 'Deleted'})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/update-status', methods=['POST'])
-def update_status():
-    try:
-        data = request.json
-        conn = get_db_conn()
-        cur = conn.cursor()
-        cur.execute("UPDATE applications SET status = %s WHERE id = %s", (data['status'], data['id']))
-        conn.commit()
-        cur.close()
-        conn.close()
-        return jsonify({'message': 'Updated'})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/update-notes', methods=['POST'])
-def update_notes():
-    try:
-        data = request.json
-        conn = get_db_conn()
-        cur = conn.cursor()
-        cur.execute("UPDATE applications SET notes = %s WHERE id = %s", (data['notes'], data['id']))
-        conn.commit()
-        cur.close()
-        conn.close()
-        return jsonify({'message': 'Updated'})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/chat', methods=['POST'])
-def chat():
-    try:
-        user_message = request.json['message']
-        CHATBOT_PROMPT = f"You are 'VN Infra Bot'... USER: {user_message}"
-        model = genai.GenerativeModel('gemini-flash-latest')
-        response = model.generate_content(CHATBOT_PROMPT)
-        return jsonify({'reply': response.text})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
 @app.route('/get-jobs', methods=['GET'])
 def get_jobs():
@@ -192,42 +171,37 @@ def get_jobs():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/add-job', methods=['POST'])
-def add_job():
-    try:
-        data = request.json
-        conn = get_db_conn()
-        cur = conn.cursor()
-        cur.execute("INSERT INTO jobs (title, description) VALUES (%s, %s)", (data['title'], data['description']))
-        conn.commit()
-        cur.close()
-        conn.close()
-        return jsonify({'message': 'Job added'})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-        
-@app.route('/get-analytics', methods=['GET'])
-def get_analytics():
+
+@app.route('/get-applications', methods=['GET'])
+def get_applications():
     try:
         conn = get_db_conn()
         cur = conn.cursor()
-        total_apps = cur.execute('SELECT COUNT(*) FROM applications').fetchone()['count']
-        total_shortlisted = cur.execute("SELECT COUNT(*) FROM applications WHERE status = 'Shortlisted'").fetchone()['count']
-        avg_score_result = cur.execute('SELECT AVG(score) FROM applications').fetchone()['avg']
-        avg_score = round(avg_score_result) if avg_score_result is not None else 0
+        cur.execute("""
+            SELECT a.*, j.title as "jobTitle"
+            FROM applications a
+            LEFT JOIN jobs j ON a.job_id = j.id
+            ORDER BY a.id DESC
+        """)
+        apps = cur.fetchall()
         cur.close()
         conn.close()
-        analytics_data = {
-            "total_apps": total_apps,
-            "total_shortlisted": total_shortlisted,
-            "avg_score": avg_score
-        }
-        return jsonify(analytics_data)
+        return jsonify({'applications': apps})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    try:
+        user_message = request.json.get('message', '')
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        response = model.generate_content(f"USER: {user_message}")
+        return jsonify({'reply': response.text})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 if __name__ == '__main__':
-    # This block is only for local testing. It won't run on Gunicorn.
-    print("\n--- Running in LOCAL TESTING Mode (Postgres required) ---")
-    port = int(os.environ.get('PORT', 5000))
-    app.run(debug=True, host='0.0.0.0', port=port)
+    print("\\n--- Running in LOCAL TESTING Mode ---")
+    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
