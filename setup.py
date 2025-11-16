@@ -8,7 +8,6 @@ DATABASE_URL = os.environ.get('DATABASE_URL')
 
 if not DATABASE_URL:
     print("FATAL: DATABASE_URL environment variable is missing.")
-    # Exits with status 1, causing the deploy to fail if the URL isn't set.
     sys.exit(1)
 
 def get_db_conn():
