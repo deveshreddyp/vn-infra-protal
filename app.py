@@ -7,9 +7,9 @@ import PyPDF2
 import io
 import json
 from google.generativeai.types import GenerationConfig
-from os import remove as os_remove
 import psycopg2 
 from psycopg2.extras import RealDictCursor
+import sys # <-- We need this for the exit status
 
 # --- 1. CRITICAL CONFIGURATION ---
 API_KEY = os.environ.get('GOOGLE_API_KEY')
@@ -31,23 +31,48 @@ def get_db_conn():
     conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
     return conn
 
+def init_db():
+    """Creates tables in PostgreSQL."""
+    print("--- Running Database Initialization ---")
+    conn = get_db_conn()
+    cur = conn.cursor()
+    
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS jobs (
+            id SERIAL PRIMARY KEY,
+            title TEXT NOT NULL,
+            description TEXT NOT NULL
+        );
+    ''')
+    
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS applications (
+            id SERIAL PRIMARY KEY,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL,
+            job_id INTEGER NOT NULL,
+            score INTEGER NOT NULL,
+            status TEXT NOT NULL,
+            filename TEXT NOT NULL,
+            summary TEXT,
+            matchingSkills TEXT,
+            missingSkills TEXT,
+            interviewQuestions TEXT,
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (job_id) REFERENCES jobs (id)
+        );
+    ''')
+    conn.commit()
+    cur.close()
+    conn.close()
+    print("--- Database Tables Created Successfully ---")
+
 # --- 3. AI & PDF HELPERS (Unchanged) ---
 def get_ai_scan(resume_text, jd_text):
     SYSTEM_PROMPT = """
     You are an expert HR recruiter...
-    {{
-      "candidateName": "The candidate's full name",
-      "candidateEmail": "The candidate's email, or 'N/A'",
-      "matchScore": <A percentage score from 0 to 100>,
-      "matchingSkills": ["List of skills..."],
-      "missingSkills": ["List of skills..."],
-      "summary": "A 2-3 sentence summary..."
-    }}
-    ---RESUME TEXT---
-    {resume_text}
-    ---END RESUME---
-    ---JOB DESCRIPTION---
-    {jd_text}
+    {{...}}
     ---END JD---
     """
     model = genai.GenerativeModel('gemini-flash-latest')
@@ -124,7 +149,7 @@ def handle_application():
         
         jd_text = job['description']
         
-        # Process file in memory (NO resume_file.save(path))
+        # Read text from memory for scanning (files are NOT saved to disk)
         resume_text = extract_pdf_text(io.BytesIO(resume_file.read()))
         if not resume_text: return jsonify({'error': 'Could not read PDF.'}), 400
         
@@ -140,7 +165,7 @@ def handle_application():
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ''', (name, email, job_id, score, status, filename, 
               ai_response.get('summary'), json.dumps(ai_response.get('matchingSkills')),
-              json.dumps(ai_response.get('missingSkills')), questions, ""))
+              json.dumps(ai_response.get('missingSkills')), questions, request.form.get('notes', "")))
         
         conn.commit()
         cur.close()
@@ -175,6 +200,7 @@ def download_application(filename):
 
 @app.route('/delete-application/<filename>', methods=['DELETE'])
 def delete_application(filename):
+    # Only deletes the DB record now
     try:
         conn = get_db_conn()
         cur = conn.cursor()
@@ -272,10 +298,12 @@ def get_analytics():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# This is the entry point for the Render server
 if __name__ == '__main__':
-    # Initializing DB for first deployment
+    # Initialize DB (This will run once during deployment)
     try:
-        init_db()
+        # We don't call init_db here because gunicorn imports the module
+        pass
     except Exception as e:
         print(f"DB Init failed: {e}")
 
