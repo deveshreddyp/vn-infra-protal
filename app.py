@@ -7,9 +7,9 @@ import PyPDF2
 import io
 import json
 from google.generativeai.types import GenerationConfig
-from os import remove as os_remove
 import psycopg2 
 from psycopg2.extras import RealDictCursor
+import sys # <-- Import sys
 
 # --- 1. CRITICAL CONFIGURATION ---
 API_KEY = os.environ.get('GOOGLE_API_KEY')
@@ -67,7 +67,16 @@ def init_db():
     conn.close()
     print("Database initialized.")
 
-# --- 3. AI & PDF HELPERS (Unchanged) ---
+# --- 3. RUN DB INITIALIZATION ON IMPORT (THE FIX) ---
+# Gunicorn will execute this immediately when the module is imported.
+# We do this *before* defining AI/PDF helpers
+try:
+    init_db()
+except Exception as e:
+    print(f"CRITICAL DB INIT FAILED: {e}")
+    # We don't exit, just log the error
+    
+# --- 4. AI & PDF HELPERS ---
 def get_ai_scan(resume_text, jd_text):
     SYSTEM_PROMPT = """
     You are an expert HR recruiter...
@@ -111,7 +120,7 @@ def extract_pdf_text(pdf_file_stream):
     except Exception as e:
         return None
 
-# --- 4. API ENDPOINTS ---
+# --- 5. API ENDPOINTS ---
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -176,7 +185,7 @@ def handle_application():
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ''', (name, email, job_id, score, status, filename, 
               ai_response.get('summary'), json.dumps(ai_response.get('matchingSkills')),
-              json.dumps(ai_response.get('missingSkills')), questions, request.form.get('notes', "")))
+              json.dumps(ai_response.get('missingSkills')), questions, ""))
         
         conn.commit()
         cur.close()
@@ -294,12 +303,23 @@ def get_analytics():
     try:
         conn = get_db_conn()
         cur = conn.cursor()
-        total_apps = cur.execute('SELECT COUNT(*) FROM applications').fetchone()['count']
-        total_shortlisted = cur.execute("SELECT COUNT(*) FROM applications WHERE status = 'Shortlisted'").fetchone()['count']
-        avg_score_result = cur.execute('SELECT AVG(score) FROM applications').fetchone()['avg']
+        
+        # Use 'AS count' to ensure the key is 'count'
+        cur.execute('SELECT COUNT(*) AS count FROM applications')
+        total_apps = cur.fetchone()['count']
+        
+        cur.execute("SELECT COUNT(*) AS count FROM applications WHERE status = 'Shortlisted'")
+        total_shortlisted = cur.fetchone()['count']
+        
+        # Use 'AS avg' to ensure the key is 'avg'
+        cur.execute('SELECT AVG(score) AS avg FROM applications')
+        avg_score_result = cur.fetchone()['avg']
+        
         avg_score = round(avg_score_result) if avg_score_result is not None else 0
+        
         cur.close()
         conn.close()
+        
         analytics_data = {
             "total_apps": total_apps,
             "total_shortlisted": total_shortlisted,
@@ -307,15 +327,13 @@ def get_analytics():
         }
         return jsonify(analytics_data)
     except Exception as e:
+        print(traceback.format_exc()) # Print full error
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    # Initialize DB (This will run once during deployment)
-    try:
-        init_db()
-    except Exception as e:
-        print(f"DB Init failed: {e}")
-
-    # Render Production Run Command
+    # This block is only for local testing.
+    # Gunicorn does NOT run this block.
+    # The 'init_db()' call must be in 'setup.py'
+    print("\n--- Running in LOCAL TESTING Mode (Requires local Postgres) ---")
     port = int(os.environ.get('PORT', 5000))
-    app.run(debug=False, host='0.0.0.0', port=port)
+    app.run(debug=True, host='0.0.0.0', port=port)
