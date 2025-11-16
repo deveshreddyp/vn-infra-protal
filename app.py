@@ -7,9 +7,9 @@ import PyPDF2
 import io
 import json
 from google.generativeai.types import GenerationConfig
+from os import remove as os_remove
 import psycopg2 
 from psycopg2.extras import RealDictCursor
-import sys # <-- We need this for the exit status
 
 # --- 1. CRITICAL CONFIGURATION ---
 API_KEY = os.environ.get('GOOGLE_API_KEY')
@@ -32,8 +32,7 @@ def get_db_conn():
     return conn
 
 def init_db():
-    """Creates tables in PostgreSQL."""
-    print("--- Running Database Initialization ---")
+    print("Initializing PostgreSQL database...")
     conn = get_db_conn()
     cur = conn.cursor()
     
@@ -66,13 +65,25 @@ def init_db():
     conn.commit()
     cur.close()
     conn.close()
-    print("--- Database Tables Created Successfully ---")
+    print("Database initialized.")
 
 # --- 3. AI & PDF HELPERS (Unchanged) ---
 def get_ai_scan(resume_text, jd_text):
     SYSTEM_PROMPT = """
     You are an expert HR recruiter...
-    {{...}}
+    {{
+      "candidateName": "The candidate's full name",
+      "candidateEmail": "The candidate's email, or 'N/A'",
+      "matchScore": <A percentage score from 0 to 100>,
+      "matchingSkills": ["List of skills..."],
+      "missingSkills": ["List of skills..."],
+      "summary": "A 2-3 sentence summary..."
+    }}
+    ---RESUME TEXT---
+    {resume_text}
+    ---END RESUME---
+    ---JOB DESCRIPTION---
+    {jd_text}
     ---END JD---
     """
     model = genai.GenerativeModel('gemini-flash-latest')
@@ -298,12 +309,10 @@ def get_analytics():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# This is the entry point for the Render server
 if __name__ == '__main__':
     # Initialize DB (This will run once during deployment)
     try:
-        # We don't call init_db here because gunicorn imports the module
-        pass
+        init_db()
     except Exception as e:
         print(f"DB Init failed: {e}")
 
