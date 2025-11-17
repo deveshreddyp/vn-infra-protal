@@ -9,7 +9,7 @@ import json
 from google.generativeai.types import GenerationConfig
 import psycopg2 
 from psycopg2.extras import RealDictCursor
-import sys # <-- Import sys
+import sys
 
 # --- 1. CRITICAL CONFIGURATION ---
 API_KEY = os.environ.get('GOOGLE_API_KEY')
@@ -27,7 +27,6 @@ CORS(app)
 
 # --- 2. DATABASE HELPER FUNCTIONS (PostgreSQL) ---
 def get_db_conn():
-    """Connects to the Render PostgreSQL database."""
     conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
     return conn
 
@@ -35,7 +34,6 @@ def init_db():
     print("Initializing PostgreSQL database...")
     conn = get_db_conn()
     cur = conn.cursor()
-    
     cur.execute('''
         CREATE TABLE IF NOT EXISTS jobs (
             id SERIAL PRIMARY KEY,
@@ -43,7 +41,6 @@ def init_db():
             description TEXT NOT NULL
         );
     ''')
-    
     cur.execute('''
         CREATE TABLE IF NOT EXISTS applications (
             id SERIAL PRIMARY KEY,
@@ -67,16 +64,13 @@ def init_db():
     conn.close()
     print("Database initialized.")
 
-# --- 3. RUN DB INITIALIZATION ON IMPORT (THE FIX) ---
-# Gunicorn will execute this immediately when the module is imported.
-# We do this *before* defining AI/PDF helpers
+# --- 3. RUN DB INITIALIZATION ON IMPORT ---
 try:
     init_db()
 except Exception as e:
     print(f"CRITICAL DB INIT FAILED: {e}")
-    # We don't exit, just log the error
     
-# --- 4. AI & PDF HELPERS ---
+# --- 4. AI & PDF HELPERS (Unchanged) ---
 def get_ai_scan(resume_text, jd_text):
     SYSTEM_PROMPT = """
     You are an expert HR recruiter...
@@ -149,6 +143,7 @@ def scan_resume():
 
 @app.route('/apply', methods=['POST'])
 def handle_application():
+    # --- THIS FUNCTION IS NOW FIXED ---
     try:
         resume_file = request.files['resume']
         name = request.form['name']
@@ -169,11 +164,16 @@ def handle_application():
         
         jd_text = job['description']
         
-        # Read text from memory for scanning (files are NOT saved to disk)
-        resume_text = extract_pdf_text(io.BytesIO(resume_file.read()))
+        # --- FIX: Read the file into a variable ONCE ---
+        resume_bytes = resume_file.read()
+        
+        # Pass the bytes to the text extractor
+        resume_text = extract_pdf_text(io.BytesIO(resume_bytes))
         if not resume_text: return jsonify({'error': 'Could not read PDF.'}), 400
         
-        ai_response = get_ai_scan(resume_text, job['description'])
+        # Use the correct variable 'jd_text'
+        ai_response = get_ai_scan(resume_text, jd_text) 
+        
         score = ai_response.get('matchScore', 0)
         status = "Shortlisted" if score >= 60 else "Pending"
         questions = get_interview_questions(ai_response.get('missingSkills', []))
@@ -215,12 +215,10 @@ def get_applications():
 
 @app.route('/download-application/<filename>', methods=['GET'])
 def download_application(filename):
-    # This endpoint is disabled for free-tier deployment
     return jsonify({'error': 'Download is disabled in free-tier deployment.'}), 403
 
 @app.route('/delete-application/<filename>', methods=['DELETE'])
 def delete_application(filename):
-    # Only deletes the DB record now
     try:
         conn = get_db_conn()
         cur = conn.cursor()
@@ -300,29 +298,30 @@ def add_job():
         
 @app.route('/get-analytics', methods=['GET'])
 def get_analytics():
+    # --- THIS FUNCTION IS NOW FIXED ---
     try:
         conn = get_db_conn()
         cur = conn.cursor()
         
-        # Use 'AS count' to ensure the key is 'count'
-        cur.execute('SELECT COUNT(*) AS count FROM applications')
-        total_apps = cur.fetchone()['count']
+        # Run one query for all stats
+        cur.execute('''
+            SELECT 
+                COUNT(*) AS total_apps,
+                COUNT(CASE WHEN status = 'Shortlisted' THEN 1 END) AS total_shortlisted,
+                AVG(score) AS avg_score
+            FROM applications
+        ''')
         
-        cur.execute("SELECT COUNT(*) AS count FROM applications WHERE status = 'Shortlisted'")
-        total_shortlisted = cur.fetchone()['count']
-        
-        # Use 'AS avg' to ensure the key is 'avg'
-        cur.execute('SELECT AVG(score) AS avg FROM applications')
-        avg_score_result = cur.fetchone()['avg']
-        
-        avg_score = round(avg_score_result) if avg_score_result is not None else 0
+        stats = cur.fetchone()
         
         cur.close()
         conn.close()
         
+        avg_score = round(stats['avg_score']) if stats['avg_score'] is not None else 0
+        
         analytics_data = {
-            "total_apps": total_apps,
-            "total_shortlisted": total_shortlisted,
+            "total_apps": stats['total_apps'],
+            "total_shortlisted": stats['total_shortlisted'],
             "avg_score": avg_score
         }
         return jsonify(analytics_data)

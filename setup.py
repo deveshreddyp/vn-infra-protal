@@ -3,7 +3,6 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import sys
 
-# CRITICAL: This file reads the DB URL from the environment, provided by Render.
 DATABASE_URL = os.environ.get('DATABASE_URL') 
 
 if not DATABASE_URL:
@@ -11,7 +10,6 @@ if not DATABASE_URL:
     sys.exit(1)
 
 def get_db_conn():
-    """Establishes a connection to the database."""
     conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
     return conn
 
@@ -20,7 +18,6 @@ def init_db():
     conn = get_db_conn()
     cur = conn.cursor()
     
-    # Create Jobs Table
     cur.execute('''
         CREATE TABLE IF NOT EXISTS jobs (
             id SERIAL PRIMARY KEY,
@@ -29,7 +26,6 @@ def init_db():
         );
     ''')
     
-    # Create Applications Table
     cur.execute('''
         CREATE TABLE IF NOT EXISTS applications (
             id SERIAL PRIMARY KEY,
@@ -55,10 +51,8 @@ def init_db():
     print("--- Database Tables Created Successfully ---")
 
 if __name__ == '__main__':
-    # Execute the initialization
     try:
         init_db()
     except Exception as e:
         print(f"DATABASE ERROR: Failed to create tables: {e}")
-        # Exit with a non-zero status so Render fails the deploy
         sys.exit(1)
