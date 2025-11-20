@@ -6,6 +6,7 @@ import google.generativeai as genai
 import PyPDF2
 import io
 import json
+import ast  # <--- ADDED: Essential for parsing Python-style lists from DB
 from google.generativeai.types import GenerationConfig
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -70,17 +71,18 @@ try:
 except Exception as e:
     print(f"CRITICAL DB INIT FAILED: {e}")
 
-# --- 4. AI & PDF HELPERS (Unchanged structure, safer parsing) ---
+# --- 4. AI & PDF HELPERS ---
 def get_ai_scan(resume_text, jd_text):
     SYSTEM_PROMPT = """
-    You are an expert HR recruiter...
+    You are an expert HR recruiter. Compare the resume to the job description.
+    Output a strictly valid JSON object with these keys:
     {{
       "candidateName": "The candidate's full name",
       "candidateEmail": "The candidate's email, or 'N/A'",
-      "matchScore": <A percentage score from 0 to 100>,
-      "matchingSkills": ["List of skills..."],
-      "missingSkills": ["List of skills..."],
-      "summary": "A 2-3 sentence summary..."
+      "matchScore": <A percentage score from 0 to 100 as an integer>,
+      "matchingSkills": ["List of skills present in both..."],
+      "missingSkills": ["List of skills in JD but missing in Resume..."],
+      "summary": "A 2-3 sentence summary of the fit."
     }}
     ---RESUME TEXT---
     {resume_text}
@@ -93,13 +95,19 @@ def get_ai_scan(resume_text, jd_text):
     prompt = SYSTEM_PROMPT.format(resume_text=resume_text, jd_text=jd_text)
     generation_config = GenerationConfig(temperature=0)
     response = model.generate_content(prompt, generation_config=generation_config)
+    
+    # Clean potential markdown
     clean_response_text = response.text.strip().replace("```json", "").replace("```", "")
-    return json.loads(clean_response_text)
+    try:
+        return json.loads(clean_response_text)
+    except:
+        # Fallback if JSON is broken
+        return {
+            "candidateName": "Unknown", "candidateEmail": "N/A", "matchScore": 0,
+            "matchingSkills": [], "missingSkills": [], "summary": "Error parsing AI response."
+        }
 
 def get_interview_questions(missing_skills_list):
-    """
-    Always return a Python list of question strings.
-    """
     if not missing_skills_list:
         return []
 
@@ -111,31 +119,23 @@ def get_interview_questions(missing_skills_list):
     model = genai.GenerativeModel('gemini-flash-latest')
     response = model.generate_content(PROMPT)
 
-    text = response.text.strip()
-    # Remove common code fences if present
-    text = text.replace("```json", "").replace("```", "").strip()
+    text = response.text.strip().replace("```json", "").replace("```", "").strip()
 
-    # Try to parse as JSON first
     try:
         parsed = json.loads(text)
         if isinstance(parsed, list):
             return [str(q).strip() for q in parsed if str(q).strip()]
         if isinstance(parsed, dict):
-            # If the model wraps it in an object, try to pull any list value
             for v in parsed.values():
                 if isinstance(v, list):
                     return [str(q).strip() for q in v if str(q).strip()]
     except Exception:
         pass
 
-    # Fallback: split by lines / bullets
+    # Fallback: split by lines if JSON parsing fails
     questions = []
     for line in text.splitlines():
-        if not line.strip():
-            continue
-        # Strip bullets and numbering like "1. ", "- ", "• "
-        cleaned = line.strip()
-        cleaned = cleaned.lstrip("-•").lstrip("0123456789. ").strip()
+        cleaned = line.strip().lstrip("-•*").lstrip("0123456789. ").strip()
         if cleaned:
             questions.append(cleaned)
 
@@ -180,7 +180,6 @@ def scan_resume():
 
 @app.route('/apply', methods=['POST'])
 def handle_application():
-    # --- THIS FUNCTION IS NOW FIXED ---
     try:
         resume_file = request.files['resume']
         name = request.form['name']
@@ -191,39 +190,34 @@ def handle_application():
         conn = get_db_conn()
         cur = conn.cursor()
 
-        # Avoid duplicate applications by filename
+        # Check duplicate
         cur.execute("SELECT id FROM applications WHERE filename = %s", (filename,))
         if cur.fetchone():
             return jsonify({'error': 'You have already applied for this job with this resume.'}), 400
 
-        # Fetch JD text
+        # Fetch JD
         cur.execute("SELECT description FROM jobs WHERE id = %s", (job_id,))
         job = cur.fetchone()
         if not job:
             return jsonify({'error': 'Invalid job selected.'}), 400
-
         jd_text = job['description']
 
-        # Read resume bytes once
+        # Process Resume
         resume_bytes = resume_file.read()
         resume_text = extract_pdf_text(io.BytesIO(resume_bytes))
         if not resume_text:
             return jsonify({'error': 'Could not read PDF.'}), 400
 
-        # Get AI scan result
+        # AI Processing
         ai_response = get_ai_scan(resume_text, jd_text)
-
         score = ai_response.get('matchScore', 0) or 0
         status = "Shortlisted" if score >= 60 else "Pending"
 
-        # Ensure skills lists are always lists
         matching_skills = ai_response.get('matchingSkills') or []
         missing_skills = ai_response.get('missingSkills') or []
-
-        # Generate interview questions as a Python list
         questions_list = get_interview_questions(missing_skills)
 
-        # Save all data to PostgreSQL (as JSON strings in TEXT columns)
+        # Insert into DB
         cur.execute('''
             INSERT INTO applications (
                 name, email, job_id, score, status, filename,
@@ -254,6 +248,7 @@ def handle_application():
 
 @app.route('/get-applications', methods=['GET'])
 def get_applications():
+    # --- ROBUST PARSING LOGIC ADDED HERE ---
     try:
         conn = get_db_conn()
         cur = conn.cursor()
@@ -267,47 +262,60 @@ def get_applications():
         cur.close()
         conn.close()
 
-        # Normalize skills & questions so frontend always gets arrays
         for app in apps:
+            # Clean up matchingSkills, missingSkills, and interviewQuestions
             for field in ['matchingSkills', 'missingSkills', 'interviewQuestions']:
                 val = app.get(field)
 
-                # Already a list (new rows after this fix)
+                # 1. If it's already a list, great.
                 if isinstance(val, list):
                     continue
-
+                
+                # 2. If empty/None, make it empty list.
                 if not val:
                     app[field] = []
                     continue
 
-                # Try to parse JSON strings like '["Python","ML"]'
+                # 3. If it's a string, try to parse it safely.
                 if isinstance(val, str):
-                    stripped = val.strip()
-                    stripped = stripped.replace("```json", "").replace("```", "").strip()
+                    cleaned = val.strip().replace("```json", "").replace("```", "").strip()
+                    parsed_list = None
+
+                    # Try JSON first (Double quotes)
                     try:
-                        parsed = json.loads(stripped)
-                        if isinstance(parsed, list):
-                            app[field] = parsed
-                            continue
-                    except Exception:
-                        # For interviewQuestions we might have old bullet text
-                        if field == 'interviewQuestions':
-                            lines = []
-                            for line in stripped.splitlines():
-                                if not line.strip():
-                                    continue
-                                cleaned = line.strip()
-                                cleaned = cleaned.lstrip("-•").lstrip("0123456789. ").strip()
-                                if cleaned:
-                                    lines.append(cleaned)
-                            app[field] = lines
-                        else:
-                            app[field] = []
+                        parsed_list = json.loads(cleaned)
+                    except:
+                        # Try Python Literal (Single quotes) using 'ast'
+                        try:
+                            parsed_list = ast.literal_eval(cleaned)
+                        except:
+                            pass # Failed both standard parsers
+
+                    # If parsing worked and gave us a list
+                    if isinstance(parsed_list, list):
+                        app[field] = [str(x) for x in parsed_list]
+                    
+                    # Fallback 1: If it's interview questions, maybe it's a bulleted list string?
+                    elif field == 'interviewQuestions':
+                        lines = []
+                        for line in cleaned.splitlines():
+                            # Remove bullets/numbers
+                            clean_line = line.strip().lstrip("-•*").lstrip("0123456789.) ").strip()
+                            if clean_line:
+                                lines.append(clean_line)
+                        app[field] = lines
+                    
+                    # Fallback 2: Comma separated string?
+                    elif ',' in cleaned:
+                         app[field] = [s.strip() for s in cleaned.split(',') if s.strip()]
+                    else:
+                        app[field] = []
                 else:
                     app[field] = []
 
         return jsonify({'applications': apps})
     except Exception as e:
+        print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
 @app.route('/download-application/<filename>', methods=['GET'])
@@ -355,17 +363,6 @@ def update_notes():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/chat', methods=['POST'])
-def chat():
-    try:
-        user_message = request.json['message']
-        CHATBOT_PROMPT = f"You are 'VN Infra Bot'... USER: {user_message}"
-        model = genai.GenerativeModel('gemini-flash-latest')
-        response = model.generate_content(CHATBOT_PROMPT)
-        return jsonify({'reply': response.text})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
 @app.route('/get-jobs', methods=['GET'])
 def get_jobs():
     try:
@@ -395,12 +392,9 @@ def add_job():
 
 @app.route('/get-analytics', methods=['GET'])
 def get_analytics():
-    # --- THIS FUNCTION IS NOW FIXED ---
     try:
         conn = get_db_conn()
         cur = conn.cursor()
-
-        # Run one query for all stats
         cur.execute('''
             SELECT 
                 COUNT(*) AS total_apps,
@@ -408,14 +402,11 @@ def get_analytics():
                 AVG(score) AS avg_score
             FROM applications
         ''')
-
         stats = cur.fetchone()
-
         cur.close()
         conn.close()
 
         avg_score = round(stats['avg_score']) if stats['avg_score'] is not None else 0
-
         analytics_data = {
             "total_apps": stats['total_apps'],
             "total_shortlisted": stats['total_shortlisted'],
@@ -423,13 +414,11 @@ def get_analytics():
         }
         return jsonify(analytics_data)
     except Exception as e:
-        print(traceback.format_exc())  # Print full error
+        print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    # This block is only for local testing.
-    # Gunicorn does NOT run this block.
-    # The 'init_db()' call must be in 'setup.py'
-    print("\n--- Running in LOCAL TESTING Mode (Requires local Postgres) ---")
+    # Local testing only
+    print("\n--- Running in LOCAL TESTING Mode ---")
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=True, host='0.0.0.0', port=port)
