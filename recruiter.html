@@ -4,66 +4,456 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Recruiter Dashboard - VN Infra</title>
-    <link rel="stylesheet" href="style.css">
     
     <style>
-        /* TABLE LAYOUT / ALIGNMENT */
+        /* ============ GLOBAL THEME & TOKENS ============ */
+        :root {
+            --primary-blue: #2563eb;
+            --accent-orange: #f97316;
+            --border-color: rgba(148, 163, 184, 0.6);
+            --light-color: #ffffff;
+            --dark-color: #020617;
+            --font-heading: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+            --bg-body: #f3f4f6;
+            --bg-surface: #ffffff;
+            --bg-surface-alt: #f9fafb;
+            --text-main: #0f172a;
+            --text-muted: #6b7280;
+            --shadow-soft: 0 18px 40px rgba(15, 23, 42, 0.08);
+            --radius-card: 18px;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            transition: background-color 0.25s ease, color 0.25s ease;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            margin: 0;
+        }
+
+        body.dark {
+            --bg-body: #020617;
+            --bg-surface: #020617;
+            --bg-surface-alt: #020617;
+            --text-main: #e5e7eb;
+            --text-muted: #9ca3af;
+            --shadow-soft: 0 18px 40px rgba(0, 0, 0, 0.55);
+        }
+
+        /* ============ GENERIC COMPONENTS ============ */
+        .card {
+            background-color: var(--bg-surface);
+            border-radius: var(--radius-card);
+            box-shadow: var(--shadow-soft);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            padding: 1.6rem 1.8rem;
+            margin-bottom: 1.8rem;
+            transition: background-color 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease, transform 0.08s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 22px 55px rgba(15, 23, 42, 0.12);
+        }
+
+        .card h2 {
+            font-size: 1.2rem;
+            margin-top: 0;
+            margin-bottom: 0.8rem;
+            color: var(--primary-blue);
+        }
+
+        .btn {
+            border-radius: 999px;
+            padding: 0.52rem 1.4rem;
+            border: none;
+            background-color: var(--primary-blue);
+            color: #ffffff;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
+            transition: background-color 0.16s ease, transform 0.06s ease, box-shadow 0.12s ease;
+        }
+
+        .btn:hover {
+            background-color: #1d4ed8;
+            transform: translateY(-1px);
+            box-shadow: 0 8px 18px rgba(37, 99, 235, 0.35);
+        }
+
+        .btn-secondary {
+            background-color: #e5e7eb;
+            color: #111827;
+            border: 1px solid rgba(148, 163, 184, 0.8);
+            box-shadow: none;
+        }
+
+        .btn-secondary:hover {
+            background-color: #d1d5db;
+            box-shadow: none;
+        }
+
+        input,
+        textarea,
+        select {
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+
+        a {
+            color: inherit;
+        }
+
+        /* ============ TOP NAVBAR ============ */
+        .header {
+            background-color: var(--bg-surface);
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.25);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .navbar {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0.5rem 1.25rem;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .nav-brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            text-decoration: none;
+            color: var(--text-main);
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .nav-brand img {
+            width: 32px;
+            height: 32px;
+            border-radius: 999px;
+            object-fit: cover;
+            background: #ffffff;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .nav-link {
+            text-decoration: none;
+            font-size: 0.9rem;
+            padding: 0.35rem 0.9rem;
+            border-radius: 999px;
+            border: 1px solid transparent;
+            color: var(--text-main);
+            background-color: transparent;
+            cursor: pointer;
+        }
+
+        .nav-link:hover {
+            background-color: rgba(148, 163, 184, 0.15);
+        }
+
+        /* ============ LAYOUT WITH SIDEBAR ============ */
+        .layout {
+            display: grid;
+            grid-template-columns: 250px minmax(0, 1fr);
+            gap: 1.8rem;
+            max-width: 1000px;          /* tighter container */
+            margin: 1.7rem auto 2.5rem auto;
+            padding-inline: 1.25rem;
+        }
+
+        @media (max-width: 960px) {
+            .layout {
+                grid-template-columns: minmax(0, 1fr);
+            }
+        }
+
+        .page-container {
+            width: 100%;
+        }
+
+        /* ============ SIDEBAR ============ */
+        .sidebar {
+            background: #020617;
+            color: #e5e7eb;
+            border-radius: 18px;
+            padding: 1.25rem 1.1rem 1.5rem 1.1rem;
+            border: 1px solid rgba(148, 163, 184, 0.4);
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.6);
+            position: sticky;
+            top: 84px;
+            height: fit-content;
+        }
+
+        .sidebar-header {
+            margin-bottom: 0.8rem;
+        }
+
+        .sidebar-title {
+            font-size: 1.05rem;
+            font-weight: 600;
+        }
+
+        .sidebar-sub {
+            font-size: 0.8rem;
+            color: #9ca3af;
+            margin-top: 0.18rem;
+        }
+
+        .sidebar-nav {
+            margin-top: 0.8rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .sidebar-nav a {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            padding: 0.45rem 0.7rem;
+            border-radius: 999px;
+            font-size: 0.9rem;
+            color: #d1d5db;
+            text-decoration: none;
+            transition: background 0.2s ease, color 0.2s ease, transform 0.08s ease;
+        }
+
+        .sidebar-nav a span.icon {
+            font-size: 1.05rem;
+        }
+
+        .sidebar-nav a:hover {
+            background: rgba(59, 130, 246, 0.25);
+            color: #f97316;
+            transform: translateX(2px);
+        }
+
+        .sidebar-divider {
+            height: 1px;
+            background: rgba(148, 163, 184, 0.5);
+            margin: 0.9rem 0 0.8rem 0;
+        }
+
+        .sidebar-meta {
+            font-size: 0.78rem;
+            color: #cbd5f5;
+            line-height: 1.5;
+        }
+
+        .sidebar-meta ul {
+            margin: 0.4rem 0 0;
+            padding-left: 1rem;
+        }
+
+        .sidebar-meta li {
+            margin-bottom: 0.15rem;
+        }
+
+        @media (max-width: 960px) {
+            .sidebar {
+                position: static;
+                width: 100%;
+                display: flex;
+                flex-direction: column;
+                gap: 0.7rem;
+            }
+            .sidebar-nav {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+            .sidebar-nav a {
+                flex: 1 0 46%;
+                justify-content: center;
+            }
+        }
+
+        /* ============ THEME TOGGLE BUTTON ============ */
+        .theme-toggle-btn {
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.7);
+            padding: 0.28rem 0.9rem;
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            cursor: pointer;
+            background: rgba(15, 23, 42, 0.06);
+            color: #0f172a;
+        }
+
+        body.dark .theme-toggle-btn {
+            background: rgba(15, 23, 42, 0.7);
+            color: #e5e7eb;
+        }
+
+        /* ============ AT-A-GLANCE ============ */
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 1.1rem;
+            margin-top: 0.7rem;
+        }
+
+        @media (max-width: 768px) {
+            .stats-container {
+                grid-template-columns: repeat(1, minmax(0, 1fr));
+            }
+        }
+
+        .stat-card {
+            background-color: var(--bg-surface-alt);
+            border-radius: 14px;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            padding: 1rem 1.1rem;
+            text-align: left;
+            position: relative;
+            overflow: hidden;
+        }
+
+        body.dark .stat-card {
+            background-color: #020617;
+        }
+
+        .stat-card h4 {
+            font-size: 0.85rem;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 0.45rem;
+        }
+
+        .stat-card .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-blue);
+        }
+
+        .stat-chip {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 0.7rem;
+            padding: 0.18rem 0.6rem;
+            border-radius: 999px;
+            background: rgba(59, 130, 246, 0.07);
+            color: #2563eb;
+        }
+
+        /* ============ FORM ELEMENTS TWEAKS ============ */
+        #scan-form label,
+        #add-job-form label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        #scan-form input,
+        #scan-form textarea,
+        #add-job-form input,
+        #add-job-form textarea {
+            margin-top: 0.2rem;
+            margin-bottom: 0.7rem;
+            border-radius: 10px;
+            border: 1px solid rgba(148, 163, 184, 0.7);
+            padding: 0.52rem 0.65rem;
+            font-size: 0.9rem;
+            width: 100%;
+        }
+
+        #scan-form textarea,
+        #add-job-form textarea {
+            min-height: 120px;
+        }
+
+        /* ============ TABLE ============ */
         .applications-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 1.5rem;
+            margin-top: 1.2rem;
         }
+
         .applications-table th,
         .applications-table td {
-            padding: 0.8rem 1rem;
+            padding: 0.6rem 0.8rem;
             border: 1px solid var(--border-color);
             text-align: left;
             vertical-align: middle;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
         }
+
         .applications-table th {
-            background-color: #f8f9fa;
+            background-color: #e5e7eb;
             font-weight: 600;
             white-space: nowrap;
         }
 
-        /* STATUS COLORS */
+        body.dark .applications-table th {
+            background-color: #020617;
+        }
+
+        /* status colors */
         .status-shortlisted {
-            color: #155724;
-            font-weight: 700;
-            background-color: #d4edda;
+            color: #166534;
+            font-weight: 600;
+            background-color: #dcfce7;
         }
         .status-pending {
             color: #555;
         }
         .status-interviewing {
-            background-color: #fff3cd;
-            color: #664d03;
-            font-weight: 700;
+            background-color: #fef9c3;
+            color: #854d0e;
+            font-weight: 600;
         }
         .status-rejected {
-            background-color: #f8d7da;
-            color: #58151c;
-            font-weight: 700;
+            background-color: #fee2e2;
+            color: #b91c1c;
+            font-weight: 600;
         }
         .status-hired {
-            background-color: #cfe2ff;
-            color: #052c65;
-            font-weight: 700;
+            background-color: #dbeafe;
+            color: #1d4ed8;
+            font-weight: 600;
+        }
+
+        .clickable-name {
+            color: var(--primary-blue);
+            font-weight: 600;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        .clickable-name:hover {
+            color: var(--accent-orange);
         }
 
         .btn-delete {
-            background-color: #dc3545;
+            background-color: #dc2626;
             color: white;
-            padding: 0.3rem 0.6rem;
+            padding: 0.25rem 0.65rem;
             font-size: 0.8rem;
             border: none;
-            border-radius: 4px;
+            border-radius: 999px;
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: background-color 0.16s ease;
         }
         .btn-delete:hover {
-            background-color: #c82333;
+            background-color: #b91c1c;
         }
 
         #notification-badge {
@@ -84,24 +474,60 @@
             100% { box-shadow: 0 0 0 0 rgba(242, 140, 40, 0); }
         }
 
-        .clickable-name {
-            color: var(--primary-blue);
-            font-weight: 600;
-            text-decoration: underline;
-            cursor: pointer;
+        /* ============ JOB LIST ============ */
+        .job-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
         }
-        .clickable-name:hover {
+
+        .job-list-item {
+            background-color: var(--bg-surface-alt);
+            border-radius: 10px;
+            border: 1px solid rgba(148, 163, 184, 0.4);
+            padding: 0.85rem 1rem;
+            margin-bottom: 0.7rem;
+        }
+
+        body.dark .job-list-item {
+            background-color: #020617;
+        }
+
+        .job-list-item h4 {
+            margin: 0 0 0.25rem 0;
+            font-size: 0.98rem;
+            color: var(--primary-blue);
+        }
+
+        .job-list-item p {
+            margin: 0;
+            font-size: 0.86rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #job-form-status {
+            font-weight: 600;
+        }
+
+        .status-success {
+            color: #16a34a;
+        }
+
+        .status-error {
             color: var(--accent-orange);
         }
 
-        /* MODAL LAYOUT / ALIGNMENT */
+        /* ============ MODAL ============ */
         .modal-backdrop {
             display: none;
             position: fixed;
             inset: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.6);
+            background-color: rgba(15, 23, 42, 0.7);
             z-index: 2000;
             opacity: 0;
             transition: opacity 0.3s ease;
@@ -111,28 +537,28 @@
             position: fixed;
             top: 50%;
             left: 50%;
-            background-color: var(--light-color);
-            padding: 2.5rem;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            background-color: var(--bg-surface);
+            padding: 2.1rem 2.2rem;
+            border-radius: 16px;
+            box-shadow: 0 22px 55px rgba(15, 23, 42, 0.4);
             width: 95%;
-            max-width: 720px;
+            max-width: 760px;
             max-height: 80vh;
             overflow-y: auto;
             z-index: 2001;
             opacity: 0;
             transform: translate(-50%, -45%);
-            transition: all 0.3s ease;
+            transition: all 0.28s ease;
             text-align: left;
             box-sizing: border-box;
         }
         .modal-close {
             position: absolute;
             top: 10px;
-            right: 20px;
-            font-size: 2rem;
+            right: 18px;
+            font-size: 1.6rem;
             font-weight: bold;
-            color: #aaa;
+            color: #9ca3af;
             cursor: pointer;
         }
         .modal-close:hover {
@@ -149,20 +575,21 @@
         }
         .modal-content h2 {
             color: var(--primary-blue);
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.5rem;
             border: none;
         }
         .modal-content h3 {
             font-family: var(--font-heading);
             color: var(--primary-blue);
-            font-size: 1.1rem;
-            margin-top: 1.25rem;
-            margin-bottom: 0.4rem;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 5px;
+            font-size: 1.02rem;
+            margin-top: 1.1rem;
+            margin-bottom: 0.35rem;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.4);
+            padding-bottom: 4px;
         }
         .modal-content .summary {
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.7rem;
+            color: var(--text-main);
         }
         .modal-content .skill-list,
         .modal-content .question-list {
@@ -177,16 +604,15 @@
         }
         .modal-content .skill-list li,
         .modal-content .question-list li {
-            font-size: 0.95rem;
-            margin-bottom: 4px;
+            font-size: 0.9rem;
+            margin-bottom: 3px;
         }
-
         .action-form {
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
             align-items: flex-start;
-            margin-top: 0.75rem;
+            margin-top: 0.55rem;
         }
         .action-form select,
         .action-form textarea {
@@ -199,15 +625,14 @@
             font-size: 0.9rem;
             align-self: flex-start;
         }
-
         #modal-notes {
             height: 80px;
             resize: vertical;
+            width: 100%;
         }
-
         #note-save-status {
-            font-size: 0.85rem;
-            color: green;
+            font-size: 0.82rem;
+            color: #16a34a;
             margin-left: 10px;
             visibility: hidden;
         }
@@ -217,25 +642,27 @@
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
+            margin-top: 1rem;
             margin-bottom: 1rem;
-            border-bottom: 2px solid var(--border-color);
-            padding-bottom: 1rem;
+            border-bottom: 1px dashed var(--border-color);
+            padding-bottom: 0.85rem;
             align-items: center;
         }
         .filter-bar .btn-filter {
             width: auto;
             margin-top: 0;
-            padding: 0.5rem 1rem;
-            font-size: 0.9rem;
-            background-color: var(--light-color);
+            padding: 0.35rem 0.9rem;
+            font-size: 0.85rem;
+            background-color: var(--bg-surface-alt);
             color: var(--primary-blue);
             border: 1px solid var(--border-color);
             cursor: pointer;
+            border-radius: 999px;
             transition: all 0.2s ease;
         }
         .filter-bar .btn-filter:hover {
-            background-color: #f0f2f5;
-            border-color: #ccc;
+            background-color: #e5e7eb;
+            border-color: #cbd5f5;
         }
         .filter-bar .btn-filter.active {
             background-color: var(--primary-blue);
@@ -243,85 +670,16 @@
             border-color: var(--primary-blue);
         }
 
-        /* JOB LIST */
-        .job-list {
-            list-style-type: none;
-            padding: 0;
-            margin-top: 1rem;
-        }
-        .job-list-item {
-            background-color: #f8f9fa;
-            padding: 1rem;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            margin-bottom: 0.75rem;
-        }
-        .job-list-item h4 {
-            font-family: var(--font-heading);
-            color: var(--primary-blue);
-            font-size: 1.1rem;
-            margin-bottom: 0.25rem;
-        }
-        .job-list-item p {
-            font-size: 0.9rem;
-            color: #555;
-            margin-bottom: 0;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        #job-form-status {
-            font-weight: 600;
-        }
-        .status-success {
-            color: green;
-        }
-        .status-error {
-            color: var(--accent-orange);
-        }
-
-        /* DASHBOARD STATS */
-        .stats-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
-            margin-top: 1rem;
-        }
-        .stat-card {
-            background-color: #f8f9fa;
-            border: 1px solid var(--border-color);
-            border-left: 5px solid var(--primary-blue);
-            border-radius: 8px;
-            padding: 1.5rem;
-            text-align: center;
-        }
-        .stat-card h4 {
-            font-family: var(--font-heading);
-            font-size: 1.1rem;
-            color: #555;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-        }
-        .stat-card .stat-number {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: var(--primary-blue);
-        }
-
         @media (max-width: 640px) {
             .modal-content {
-                padding: 1.5rem;
-            }
-            .applications-table th,
-            .applications-table td {
-                padding: 0.5rem 0.6rem;
+                padding: 1.6rem 1.3rem;
             }
         }
     </style>
 </head>
 <body>
 
+    <!-- TOP NAVBAR -->
     <header class="header">
         <nav class="navbar">
             <a href="index.html" class="nav-brand">
@@ -329,96 +687,145 @@
                 VN Infra Reyality
             </a>
             <div class="nav-links">
+                <button id="theme-toggle" type="button" class="nav-link theme-toggle-btn">
+                    🌙 Dark
+                </button>
                 <a href="index.html" class="nav-link">Back to Portal</a>
             </div>
         </nav>
     </header>
 
-    <main class="page-container">
-    
-        <div class="card">
-            <h2>At-a-Glance</h2>
-            <div class="stats-container">
-                <div class="stat-card">
-                    <h4>Total Applications</h4>
-                    <p class="stat-number" id="stat-total-apps">0</p>
-                </div>
-                <div class="stat-card" style="border-left-color: #155724;">
-                    <h4>Total Shortlisted</h4>
-                    <p class="stat-number" id="stat-total-shortlisted">0</p>
-                </div>
-                <div class="stat-card" style="border-left-color: var(--accent-orange);">
-                    <h4>Average Score</h4>
-                    <p class="stat-number" id="stat-avg-score">0%</p>
-                </div>
+    <!-- MAIN LAYOUT -->
+    <div class="layout">
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-title">Recruiter Panel</div>
+                <div class="sidebar-sub">VN Infra Reality · AI-powered</div>
             </div>
-        </div>
 
-        <div class="card">
-            <h2>AI Resume Scanner</h2>
-            <form id="scan-form">
-                <label for="resume-file">Upload Candidate's Resume:</label>
-                <input type="file" id="resume-file" accept=".pdf" required>
-                <label for="jd-text">Paste Job Description:</label>
-                <textarea id="jd-text" placeholder="Paste the full job description here..." required></textarea>
-                <button type="submit" class="btn">Scan Resume</button>
-            </form>
-            <div id="results"></div>
-        </div>
+            <nav class="sidebar-nav">
+                <a href="#section-overview"><span class="icon">📊</span><span>Overview</span></a>
+                <a href="#section-scanner"><span class="icon">🧠</span><span>AI Scanner</span></a>
+                <a href="#section-applications"><span class="icon">📁</span><span>Applications</span></a>
+                <a href="#section-jobs"><span class="icon">📌</span><span>Job Postings</span></a>
+            </nav>
 
-        <div class="card">
-            <h2>Submitted Applications <span id="notification-badge"></span></h2>
-            <button id="load-apps-button" class="btn btn-secondary" style="width: auto;">
-                Load Applications
-            </button>
-            <div class="filter-bar" style="margin-top: 1.5rem;">
-                <span>Filter by:</span>
-                <button class="btn-filter active" data-filter="All">All</button>
-                <button class="btn-filter" data-filter="Shortlisted">Shortlisted</button>
-                <button class="btn-filter" data-filter="Pending">Pending</button>
-                <button class="btn-filter" data-filter="Interviewing">Interviewing</button>
-                <button class="btn-filter" data-filter="Rejected">Rejected</button>
-                <span style="margin-left: auto;">Sort by:</span>
-                <button id="sort-by-score" class="btn-filter">Score (High to Low)</button>
+            <div class="sidebar-divider"></div>
+
+            <div class="sidebar-meta">
+                <strong>How to use</strong>
+                <ul>
+                    <li>Use <b>AI Scanner</b> to test any resume vs JD.</li>
+                    <li>Click a candidate name to view full AI analysis.</li>
+                    <li>Update status & notes directly from the modal.</li>
+                    <li>Filter and sort to focus on best matches.</li>
+                </ul>
             </div>
-            <div style="overflow-x: auto;">
-                <table class="applications-table">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Job</th>
-                            <th>Score</th>
-                            <th>Status</th>
-                            <th>Resume</th>
-                            <th>Action</th> 
-                        </tr>
-                    </thead>
-                    <tbody id="application-list-body">
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="page-container">
         
-        <div class="card">
-            <h2>Manage Job Postings</h2>
-            <p>Add new job roles here. They will automatically appear on the "Apply for a Job" page.</p>
-            <form id="add-job-form">
-                <label for="job-title">New Job Title:</label>
-                <input type="text" id="job-title-input" placeholder="e.g., Project Manager" required>
-                <label for="job-description">Job Description:</label>
-                <textarea id="job-description-input" placeholder="Paste the full job description here..." required></textarea>
-                <button type="submit" class="btn">Add New Job</button>
-                <p id="job-form-status" style="margin-top: 1rem;"></p>
-            </form>
-            <h3 style="margin-top: 2rem;">Current Live Jobs</h3>
-            <button id="load-jobs-button" class="btn btn-secondary" style="width: auto; margin-top: 0.5rem;">Refresh Job List</button>
-            <div id="job-list-container">
-                <ul class="job-list" id="job-list"></ul>
-            </div>
-        </div>
-        
-    </main>
+            <!-- OVERVIEW -->
+            <section class="card" id="section-overview">
+                <h2>At-a-Glance</h2>
+                <div class="stats-container">
+                    <div class="stat-card">
+                        <span class="stat-chip">All time</span>
+                        <h4>Total Applications</h4>
+                        <p class="stat-number" id="stat-total-apps">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-chip">AI Shortlisted</span>
+                        <h4>Total Shortlisted</h4>
+                        <p class="stat-number" id="stat-total-shortlisted">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-chip">Average Fit</span>
+                        <h4>Average Score</h4>
+                        <p class="stat-number" id="stat-avg-score">0%</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- AI SCANNER -->
+            <section class="card" id="section-scanner">
+                <h2>AI Resume Scanner</h2>
+                <p style="font-size:0.9rem;color:var(--text-muted);margin-bottom:0.8rem;">
+                    Quickly evaluate a candidate without storing their data. This does not create an application record.
+                </p>
+                <form id="scan-form">
+                    <label for="resume-file">Upload Candidate's Resume:</label>
+                    <input type="file" id="resume-file" accept=".pdf" required>
+                    <label for="jd-text">Paste Job Description:</label>
+                    <textarea id="jd-text" placeholder="Paste the full job description here..." required></textarea>
+                    <button type="submit" class="btn">Scan Resume</button>
+                </form>
+                <div id="results" style="margin-top:1rem;"></div>
+            </section>
+
+            <!-- APPLICATIONS -->
+            <section class="card" id="section-applications">
+                <h2>Submitted Applications <span id="notification-badge"></span></h2>
+                <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.7rem;">
+                    These are all stored applications submitted from the public portal.
+                </p>
+                <button id="load-apps-button" class="btn btn-secondary" style="width: auto; margin-bottom:0.2rem;">
+                    Load Applications
+                </button>
+                <div class="filter-bar">
+                    <span style="font-size:0.85rem;">Filter by:</span>
+                    <button class="btn-filter active" data-filter="All">All</button>
+                    <button class="btn-filter" data-filter="Shortlisted">Shortlisted</button>
+                    <button class="btn-filter" data-filter="Pending">Pending</button>
+                    <button class="btn-filter" data-filter="Interviewing">Interviewing</button>
+                    <button class="btn-filter" data-filter="Rejected">Rejected</button>
+                    <span style="margin-left:auto;font-size:0.85rem;">Sort by:</span>
+                    <button id="sort-by-score" class="btn-filter">Score (High to Low)</button>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table class="applications-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Job</th>
+                                <th>Score</th>
+                                <th>Status</th>
+                                <th>Resume</th>
+                                <th>Action</th> 
+                            </tr>
+                        </thead>
+                        <tbody id="application-list-body">
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            
+            <!-- JOBS -->
+            <section class="card" id="section-jobs">
+                <h2>Manage Job Postings</h2>
+                <p style="font-size:0.9rem;color:var(--text-muted);margin-bottom:0.7rem;">
+                    Jobs added here are shown on the candidate portal for new applications.
+                </p>
+                <form id="add-job-form">
+                    <label for="job-title">New Job Title:</label>
+                    <input type="text" id="job-title-input" placeholder="e.g., Full Stack Developer" required>
+                    <label for="job-description">Job Description:</label>
+                    <textarea id="job-description-input" placeholder="Paste the full job description here..." required></textarea>
+                    <button type="submit" class="btn">Add New Job</button>
+                    <p id="job-form-status" style="margin-top: 0.8rem;"></p>
+                </form>
+                <h3 style="margin-top: 1.8rem;">Current Live Jobs</h3>
+                <button id="load-jobs-button" class="btn btn-secondary" style="width: auto; margin-top: 0.6rem;">Refresh Job List</button>
+                <div id="job-list-container" style="margin-top:0.8rem;">
+                    <ul class="job-list" id="job-list"></ul>
+                </div>
+            </section>
+            
+        </main>
+    </div>
     
     <!-- MODAL -->
     <div class="modal-backdrop" id="modal-backdrop"></div>
@@ -468,7 +875,6 @@
             formData.append('jobDescription', jdText);
 
             try {
-                // --- DEPLOYMENT URL ---
                 const response = await fetch('https://vn-infra-protal-1.onrender.com/scan-resume', { 
                     method: 'POST', 
                     body: formData 
@@ -533,6 +939,7 @@
         const jobFormStatus = document.getElementById('job-form-status');
         const jobList = document.getElementById('job-list');
         const loadJobsButton = document.getElementById('load-jobs-button');
+        const themeToggleBtn = document.getElementById('theme-toggle');
         
         let currentAppId = null; 
         let applicationsData = []; 
@@ -552,7 +959,6 @@
             noteInput.value = app.notes || ''; 
             noteSaveStatus.style.visibility = 'hidden'; 
 
-            // Safely get skills / questions (supports camelCase & snake_case)
             const matchingSkills = safeParseJSON(
                 app.matchingSkills || app.matching_skills,
                 []
@@ -605,10 +1011,9 @@
         }
 
         // --- Delete Application ---
-        async function deleteApplication(filename, name, rowElement) {
+        async function deleteApplication(filename, name) {
             if (!confirm(`Are you sure you want to delete the application for ${name}?`)) { return; }
             try {
-                // --- DEPLOYMENT URL ---
                 const response = await fetch('https://vn-infra-protal-1.onrender.com/delete-application/' + filename, { method: 'DELETE' });
                 const data = await response.json();
                 if (!response.ok) { throw new Error(data.error || 'Could not delete application'); }
@@ -684,7 +1089,6 @@
                 row.appendChild(statusCell);
                 
                 const downloadCell = document.createElement('td');
-                // --- NO DOWNLOAD LINK ---
                 downloadCell.textContent = 'Analyzed (No File)';
                 downloadCell.style.color = "#777";
                 downloadCell.style.fontStyle = "italic";
@@ -695,7 +1099,7 @@
                 deleteButton.textContent = 'Delete';
                 deleteButton.className = 'btn-delete';
                 deleteButton.onclick = () => {
-                    deleteApplication(app.filename, app.name, row);
+                    deleteApplication(app.filename, app.name);
                 };
                 deleteCell.appendChild(deleteButton);
                 row.appendChild(deleteCell);
@@ -709,7 +1113,6 @@
             badge.style.display = 'none';
             badge.style.animation = 'none';
             try {
-                // --- DEPLOYMENT URL ---
                 const response = await fetch('https://vn-infra-protal-1.onrender.com/get-applications');
                 const data = await response.json();
                 if (!response.ok) { throw new Error(data.error || 'Could not load applications'); }
@@ -731,7 +1134,6 @@
             if (!currentAppId) return; 
             
             try {
-                // --- DEPLOYMENT URL ---
                 const response = await fetch('https://vn-infra-protal-1.onrender.com/update-status', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -762,7 +1164,6 @@
             if (currentAppId === null) return;
             noteSaveStatus.style.visibility = 'hidden';
             try {
-                // --- DEPLOYMENT URL ---
                 const response = await fetch('https://vn-infra-protal-1.onrender.com/update-notes', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -788,7 +1189,6 @@
         // --- Filter/Sort Event Listeners ---
         filterBar.addEventListener('click', (e) => {
             if (e.target.classList.contains('btn-filter')) {
-                // Filter buttons
                 if (e.target.dataset.filter) {
                     filterBar.querySelectorAll('.btn-filter[data-filter]').forEach(btn => {
                         btn.classList.remove('active');
@@ -797,7 +1197,6 @@
                     e.target.classList.add('active');
                 }
 
-                // Sort toggle button
                 if (e.target.id === 'sort-by-score') {
                     currentSort = 'score';
                     e.target.textContent = 'Sort by Date (Newest)';
@@ -812,10 +1211,9 @@
             }
         });
         
-        // --- Function to load analytics ---
+        // --- Analytics ---
         async function loadAnalytics() {
             try {
-                // --- DEPLOYMENT URL ---
                 const response = await fetch('https://vn-infra-protal-1.onrender.com/get-analytics');
                 const data = await response.json();
                 if (!response.ok) { throw new Error(data.error); }
@@ -823,7 +1221,6 @@
                 document.getElementById('stat-total-apps').textContent = data.total_apps ?? 0;
                 document.getElementById('stat-total-shortlisted').textContent = data.total_shortlisted ?? 0;
                 document.getElementById('stat-avg-score').textContent = `${data.avg_score ?? 0}%`;
-                
             } catch (error) {
                 console.error('Error loading analytics:', error);
             }
@@ -833,7 +1230,6 @@
         async function loadJobs() {
             jobList.innerHTML = '<p>Loading...</p>';
             try {
-                // --- DEPLOYMENT URL ---
                 const response = await fetch('https://vn-infra-protal-1.onrender.com/get-jobs');
                 const data = await response.json();
                 if (!response.ok) { throw new Error(data.error); }
@@ -867,7 +1263,6 @@
             jobFormStatus.className = '';
             
             try {
-                // --- DEPLOYMENT URL ---
                 const response = await fetch('https://vn-infra-protal-1.onrender.com/add-job', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -888,11 +1283,36 @@
         
         loadJobsButton.addEventListener('click', loadJobs);
 
-        // --- Load all data on page load ---
+        // --- THEME HANDLING ---
+        function updateThemeToggleLabel() {
+            if (!themeToggleBtn) return;
+            if (document.body.classList.contains('dark')) {
+                themeToggleBtn.textContent = '☀️ Light';
+            } else {
+                themeToggleBtn.textContent = '🌙 Dark';
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', async () => {
-            // Load notification badge
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark');
+            }
+            updateThemeToggleLabel();
+
+            if (themeToggleBtn) {
+                themeToggleBtn.addEventListener('click', () => {
+                    document.body.classList.toggle('dark');
+                    localStorage.setItem(
+                        'theme',
+                        document.body.classList.contains('dark') ? 'dark' : 'light'
+                    );
+                    updateThemeToggleLabel();
+                });
+            }
+
+            // Badge count
             try {
-                // --- DEPLOYMENT URL ---
                 const response = await fetch('https://vn-infra-protal-1.onrender.com/get-applications');
                 const data = await response.json();
                 if (response.ok && data.applications && data.applications.length > 0) {
