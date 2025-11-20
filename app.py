@@ -7,7 +7,7 @@ import PyPDF2
 import io
 import json
 import ast
-import re  # For robust JSON extraction
+import re
 from google.generativeai.types import GenerationConfig
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -18,24 +18,23 @@ DATABASE_URL = os.environ.get('DATABASE_URL')
 
 try:
     if not API_KEY:
-        print("CRITICAL ERROR: GOOGLE_API_KEY not set.")
+        print("CRITICAL ERROR: GOOGLE_API_KEY environment variable not set.")
     genai.configure(api_key=API_KEY)
 except Exception as e:
-    print(f"Error configuring API: {e}")
+    print(f"Error configuring API key: {e}")
 
 app = Flask(__name__)
 CORS(app)
 
-# --- DATABASE ---
+# --- DATABASE HELPERS ---
 def get_db_conn():
     return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
 def init_db():
     try:
+        print("Initializing Database...")
         conn = get_db_conn()
         cur = conn.cursor()
-        
-        # Jobs Table
         cur.execute('''
             CREATE TABLE IF NOT EXISTS jobs (
                 id SERIAL PRIMARY KEY,
@@ -43,8 +42,6 @@ def init_db():
                 description TEXT NOT NULL
             );
         ''')
-        
-        # Applications Table
         cur.execute('''
             CREATE TABLE IF NOT EXISTS applications (
                 id SERIAL PRIMARY KEY,
@@ -66,18 +63,18 @@ def init_db():
         conn.commit()
         cur.close()
         conn.close()
-        print("Database Initialized.")
+        print("Database Ready.")
     except Exception as e:
-        print(f"DB Init Error: {e}")
+        print(f"DB Init Failed: {e}")
 
 init_db()
 
-# --- HELPER FUNCTIONS ---
+# --- AI & TEXT HELPERS ---
 
 def extract_json_from_text(text):
-    """Extracts valid JSON from a string, ignoring Markdown or extra text."""
+    """Extracts JSON object from text using Regex to handle markdown or chatter."""
     text = text.strip()
-    # 1. Try Regex to find { ... } or [ ... ]
+    # Regex to find content between the first { and the last }
     match = re.search(r'(\{.*\}|\[.*\])', text, re.DOTALL)
     if match:
         try:
@@ -85,66 +82,69 @@ def extract_json_from_text(text):
         except:
             pass
     
-    # 2. Fallback: clean code blocks
+    # Fallback: Remove markdown code blocks
     clean_text = text.replace("```json", "").replace("```", "").strip()
     try:
         return json.loads(clean_text)
     except:
         return None
 
-def get_case_insensitive(data, key, default=None):
-    """Helper to get value from dict ignoring key case."""
-    if not isinstance(data, dict): return default
-    if key in data: return data[key]
-    for k, v in data.items():
-        if k.lower() == key.lower(): return v
-    return default
-
 def extract_pdf_text(file_stream):
     try:
         reader = PyPDF2.PdfReader(file_stream)
-        return "".join([p.extract_text() for p in reader.pages])
-    except:
-        return ""
-
-# --- AI FUNCTIONS ---
+        text = "".join([page.extract_text() for page in reader.pages])
+        return text
+    except Exception as e:
+        print(f"PDF Error: {e}")
+        return None
 
 def get_ai_scan(resume_text, jd_text):
+    # UPDATED MODEL NAME TO STABLE VERSION
+    model_name = 'gemini-1.5-flash' 
+    
     SYSTEM_PROMPT = """
-    You are an HR AI. Compare the resume to the JD.
-    Output ONLY valid JSON. No markdown.
+    You are an expert Tech Recruiter. Compare the Resume to the Job Description.
+    Return ONLY a valid JSON object. Do not write any intro text.
     Format:
     {
-      "candidateName": "Name",
-      "candidateEmail": "Email",
+      "candidateName": "Full Name",
+      "candidateEmail": "Email or 'N/A'",
       "matchScore": 85,
-      "matchingSkills": ["Skill A", "Skill B"],
-      "missingSkills": ["Skill C"],
-      "summary": "Brief summary."
+      "matchingSkills": ["Skill1", "Skill2"],
+      "missingSkills": ["Skill3", "Skill4"],
+      "summary": "2 sentence analysis of the candidate."
     }
     RESUME: {resume_text}
-    JD: {jd_text}
+    JOB DESCRIPTION: {jd_text}
     """
     try:
-        model = genai.GenerativeModel('gemini-flash-latest')
+        model = genai.GenerativeModel(model_name)
         response = model.generate_content(SYSTEM_PROMPT.format(resume_text=resume_text, jd_text=jd_text))
+        
         data = extract_json_from_text(response.text)
-        if not data: raise ValueError("Invalid JSON from AI")
+        
+        if not data:
+            print("AI Error: Returned invalid JSON.")
+            return {}
+            
         return data
     except Exception as e:
-        print(f"AI Scan Error: {e}")
+        print(f"AI Scan Exception: {e}")
         return {}
 
 def get_interview_questions(missing_skills):
     if not missing_skills: return []
+    
     skills_str = ", ".join(missing_skills[:5])
-    PROMPT = f"Generate 3 interview questions for: {skills_str}. Return JSON array: [\"Q1\", \"Q2\"]"
+    PROMPT = f"Generate 3 interview questions for: {skills_str}. Return JSON array of strings: [\"Q1\", \"Q2\"]"
+    
     try:
-        model = genai.GenerativeModel('gemini-flash-latest')
+        model = genai.GenerativeModel('gemini-1.5-flash')
         response = model.generate_content(PROMPT)
         data = extract_json_from_text(response.text)
+        
         if isinstance(data, list): return data
-        if isinstance(data, dict): return list(data.values())[0] # extraction fallback
+        if isinstance(data, dict): return list(data.values())[0]
         return []
     except:
         return []
@@ -154,24 +154,20 @@ def get_interview_questions(missing_skills):
 @app.route('/login', methods=['POST'])
 def login():
     try:
-        # Handle both JSON requests and Form data
+        # Handle both JSON and Form data
         data = request.json if request.is_json else request.form
         
-        # Get password safely
+        # Safe Get & Clean
         raw_password = data.get('password', '')
-        
-        # Clean it: trim spaces, convert to lowercase
         password_attempt = str(raw_password).strip().lower()
         
-        print(f"LOGIN ATTEMPT: Received '{raw_password}' -> Checked '{password_attempt}'")
+        print(f"LOGIN DEBUG: received='{raw_password}' cleaned='{password_attempt}'")
 
         if password_attempt == 'deva':
             return jsonify({'success': True})
         else:
             return jsonify({'success': False, 'error': 'Incorrect Password'}), 401
-            
     except Exception as e:
-        print(f"Login Error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/scan-resume', methods=['POST'])
@@ -180,7 +176,8 @@ def scan_resume():
         resume_file = request.files['resume']
         jd_text = request.form['jobDescription']
         text = extract_pdf_text(io.BytesIO(resume_file.read()))
-        if not text: return jsonify({'error': 'Empty PDF'}), 400
+        if not text: return jsonify({'error': 'PDF is empty/unreadable'}), 400
+        
         result = get_ai_scan(text, jd_text)
         return jsonify(result)
     except Exception as e:
@@ -193,34 +190,40 @@ def apply():
         name = request.form['name']
         email = request.form['email']
         job_id = request.form['jobId']
-        
         filename = f"{name.replace(' ', '_')}-{job_id}-{resume_file.filename}"
-        
+
         conn = get_db_conn()
         cur = conn.cursor()
-        
-        # Check duplicate
-        cur.execute("SELECT id FROM applications WHERE filename=%s", (filename,))
-        if cur.fetchone(): return jsonify({'error': 'Already applied'}), 400
-        
+
+        # Check Duplicate
+        cur.execute("SELECT id FROM applications WHERE filename = %s", (filename,))
+        if cur.fetchone():
+            return jsonify({'error': 'Application already exists.'}), 400
+
         # Get JD
-        cur.execute("SELECT description FROM jobs WHERE id=%s", (job_id,))
+        cur.execute("SELECT description FROM jobs WHERE id = %s", (job_id,))
         job = cur.fetchone()
         if not job: return jsonify({'error': 'Job not found'}), 400
-        
+
         # Process
         resume_bytes = resume_file.read()
         text = extract_pdf_text(io.BytesIO(resume_bytes))
         ai_data = get_ai_scan(text, job['description'])
-        
-        score = int(get_case_insensitive(ai_data, 'matchScore', 0))
-        summary = get_case_insensitive(ai_data, 'summary', '')
-        matching = get_case_insensitive(ai_data, 'matchingSkills', [])
-        missing = get_case_insensitive(ai_data, 'missingSkills', [])
+
+        # Safely get fields (Case insensitive lookup helper)
+        def get_field(d, key, default):
+            for k in d.keys():
+                if k.lower() == key.lower(): return d[k]
+            return default
+
+        score = int(get_field(ai_data, 'matchScore', 0))
+        summary = get_field(ai_data, 'summary', '')
+        matching = get_field(ai_data, 'matchingSkills', [])
+        missing = get_field(ai_data, 'missingSkills', [])
         
         questions = get_interview_questions(missing)
         status = "Shortlisted" if score >= 60 else "Pending"
-        
+
         cur.execute('''
             INSERT INTO applications 
             (name, email, job_id, score, status, filename, summary, matchingSkills, missingSkills, interviewQuestions, notes)
@@ -232,7 +235,7 @@ def apply():
         conn.commit()
         cur.close()
         conn.close()
-        return jsonify({'message': 'Applied'})
+        return jsonify({'message': 'Application Submitted!'})
     except Exception as e:
         print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
@@ -243,44 +246,34 @@ def get_applications():
         conn = get_db_conn()
         cur = conn.cursor()
         cur.execute('''
-            SELECT a.*, j.title as "jobTitle" 
-            FROM applications a 
-            LEFT JOIN jobs j ON a.job_id = j.id 
+            SELECT a.*, j.title as "jobTitle"
+            FROM applications a
+            LEFT JOIN jobs j ON a.job_id = j.id
             ORDER BY a.id DESC
         ''')
         apps = cur.fetchall()
         cur.close()
         conn.close()
-        
-        # CLEAN UP DATA FOR FRONTEND
+
+        # Parse JSON strings back to lists
         for app in apps:
             for field in ['matchingSkills', 'missingSkills', 'interviewQuestions']:
                 val = app.get(field)
-                
-                # If it's already a list, perfect
                 if isinstance(val, list): continue
-                
-                # If None/Empty, empty list
                 if not val: 
                     app[field] = []
                     continue
                 
-                # If string, parse it
+                # Try JSON, then Eval, then Split
                 if isinstance(val, str):
                     try:
-                        # Try JSON
                         app[field] = json.loads(val)
                     except:
                         try:
-                            # Try Python List string
                             app[field] = ast.literal_eval(val)
                         except:
-                            # Fallback: Split by newlines or commas
-                            if '\n' in val:
-                                app[field] = [x.strip("-• ").strip() for x in val.splitlines() if x.strip()]
-                            else:
-                                app[field] = [x.strip() for x in val.split(',') if x.strip()]
-                            
+                            app[field] = [x.strip() for x in val.split(',') if x.strip()]
+
         return jsonify({'applications': apps})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -290,7 +283,7 @@ def delete_app(filename):
     try:
         conn = get_db_conn()
         cur = conn.cursor()
-        cur.execute("DELETE FROM applications WHERE filename=%s", (filename,))
+        cur.execute("DELETE FROM applications WHERE filename = %s", (filename,))
         conn.commit()
         return jsonify({'message': 'Deleted'})
     except Exception as e: return jsonify({'error': str(e)}), 500
@@ -301,7 +294,7 @@ def update_status():
         d = request.json
         conn = get_db_conn()
         cur = conn.cursor()
-        cur.execute("UPDATE applications SET status=%s WHERE id=%s", (d['status'], d['id']))
+        cur.execute("UPDATE applications SET status = %s WHERE id = %s", (d['status'], d['id']))
         conn.commit()
         return jsonify({'message': 'Updated'})
     except Exception as e: return jsonify({'error': str(e)}), 500
@@ -312,7 +305,7 @@ def update_notes():
         d = request.json
         conn = get_db_conn()
         cur = conn.cursor()
-        cur.execute("UPDATE applications SET notes=%s WHERE id=%s", (d['notes'], d['id']))
+        cur.execute("UPDATE applications SET notes = %s WHERE id = %s", (d['notes'], d['id']))
         conn.commit()
         return jsonify({'message': 'Updated'})
     except Exception as e: return jsonify({'error': str(e)}), 500
@@ -345,17 +338,16 @@ def get_analytics():
         cur = conn.cursor()
         cur.execute("SELECT COUNT(*) as total, AVG(score) as avg FROM applications")
         res = cur.fetchone()
-        
         cur.execute("SELECT COUNT(*) as shortlisted FROM applications WHERE status='Shortlisted'")
-        short_res = cur.fetchone()
+        short = cur.fetchone()
         
         return jsonify({
-            'total_apps': res['total'], 
-            'avg_score': int(res['avg'] or 0), 
-            'total_shortlisted': short_res['shortlisted']
+            "total_apps": res['total'],
+            "avg_score": int(res['avg'] or 0),
+            "total_shortlisted": short['shortlisted']
         })
     except Exception as e: return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    print("--- Running in LOCAL Mode ---")
+    print("--- Local Mode ---")
     app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
