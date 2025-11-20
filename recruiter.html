@@ -4,542 +4,242 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Recruiter Dashboard - VN Infra</title>
-    
     <style>
-        /* ============ GLOBAL THEME ============ */
         :root {
-            --primary-blue: #2563eb;
-            --accent-orange: #f97316;
-            --border-color: rgba(148, 163, 184, 0.6);
-            --light-color: #ffffff;
-            --dark-color: #020617;
-            --font-heading: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            --bg-body: #f3f4f6;
-            --bg-surface: #ffffff;
-            --bg-surface-alt: #f9fafb;
-            --text-main: #0f172a;
-            --text-muted: #6b7280;
-            --shadow-soft: 0 18px 40px rgba(15, 23, 42, 0.08);
-            --radius-card: 18px;
+            --primary: #2563eb;
+            --bg: #f3f4f6;
+            --surface: #ffffff;
+            --text: #0f172a;
+            --border: #e2e8f0;
         }
-
-        body {
-            background-color: var(--bg-body);
-            color: var(--text-main);
-            transition: background-color 0.25s ease, color 0.25s ease;
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            margin: 0;
-        }
-
         body.dark {
-            --bg-body: #020617;
-            --bg-surface: #020617;
-            --bg-surface-alt: #020617;
-            --text-main: #e5e7eb;
-            --text-muted: #9ca3af;
-            --shadow-soft: 0 18px 40px rgba(0, 0, 0, 0.55);
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --text: #f8fafc;
+            --border: #334155;
         }
-
-        /* ============ COMPONENTS ============ */
-        .card {
-            background-color: var(--bg-surface);
-            border-radius: var(--radius-card);
-            box-shadow: var(--shadow-soft);
-            border: 1px solid rgba(148, 163, 184, 0.25);
-            padding: 1.6rem 1.8rem;
-            margin-bottom: 1.8rem;
-        }
-
-        .card h2 {
-            font-size: 1.2rem;
-            margin-top: 0;
-            margin-bottom: 0.8rem;
-            color: var(--primary-blue);
-        }
-
-        .btn {
-            border-radius: 999px;
-            padding: 0.52rem 1.4rem;
-            border: none;
-            background-color: var(--primary-blue);
-            color: #ffffff;
-            font-size: 0.9rem;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            transition: transform 0.1s ease;
-        }
-
-        .btn:hover {
-            background-color: #1d4ed8;
-            transform: translateY(-1px);
-        }
-
-        .btn-secondary {
-            background-color: #e5e7eb;
-            color: #111827;
-            border: 1px solid rgba(148, 163, 184, 0.8);
-        }
-        .btn-secondary:hover { background-color: #d1d5db; }
-
-        input, textarea, select {
-            font-family: inherit;
-            box-sizing: border-box;
-        }
-
-        /* ============ HEADER ============ */
-        .header {
-            background-color: var(--bg-surface);
-            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.25);
-            position: sticky;
-            top: 0;
-            z-index: 50;
-        }
-
-        .navbar {
-            max-width: 1100px;
-            margin: 0 auto;
-            padding: 0.5rem 1.25rem;
-            height: 64px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .nav-brand {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.6rem;
-            text-decoration: none;
-            color: var(--text-main);
-            font-weight: 600;
-        }
-
-        .nav-brand img {
-            width: 32px;
-            height: 32px;
-            border-radius: 999px;
-            object-fit: cover;
-        }
-
-        .nav-links { display: flex; gap: 0.75rem; align-items: center; }
-        .nav-link {
-            text-decoration: none;
-            font-size: 0.9rem;
-            padding: 0.35rem 0.9rem;
-            border-radius: 999px;
-            color: var(--text-main);
-            cursor: pointer;
-            background: transparent;
-            border: 1px solid transparent;
-        }
-        .nav-link:hover { background-color: rgba(148, 163, 184, 0.15); }
-
-        /* ============ LAYOUT ============ */
-        .layout {
-            display: grid;
-            grid-template-columns: 250px minmax(0, 1fr);
-            gap: 1.8rem;
-            max-width: 1000px;
-            margin: 1.7rem auto 2.5rem auto;
-            padding-inline: 1.25rem;
-        }
-
-        @media (max-width: 960px) {
-            .layout { grid-template-columns: minmax(0, 1fr); }
-        }
-
-        /* ============ SIDEBAR ============ */
-        .sidebar {
-            background: #020617;
-            color: #e5e7eb;
-            border-radius: 18px;
-            padding: 1.25rem 1.1rem;
-            border: 1px solid rgba(148, 163, 184, 0.4);
-            position: sticky;
-            top: 84px;
-            height: fit-content;
-        }
-
-        .sidebar-title { font-size: 1.05rem; font-weight: 600; }
-        .sidebar-sub { font-size: 0.8rem; color: #9ca3af; }
+        body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; }
         
-        .sidebar-nav { margin-top: 0.8rem; display: flex; flex-direction: column; gap: 0.3rem; }
-        .sidebar-nav a {
-            color: #d1d5db;
-            text-decoration: none;
-            padding: 0.45rem 0.7rem;
-            border-radius: 999px;
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            gap: 0.55rem;
-        }
-        .sidebar-nav a:hover { background: rgba(59, 130, 246, 0.25); color: #f97316; }
-
-        /* ============ STATS ============ */
-        .stats-container {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 1.1rem;
-            margin-top: 0.7rem;
-        }
-        @media (max-width: 768px) { .stats-container { grid-template-columns: 1fr; } }
-
-        .stat-card {
-            background-color: var(--bg-surface-alt);
-            border-radius: 14px;
-            border: 1px solid rgba(148, 163, 184, 0.35);
-            padding: 1rem 1.1rem;
-            position: relative;
-        }
-        body.dark .stat-card { background-color: #020617; }
+        .header { background: var(--surface); padding: 1rem 2rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .brand { font-weight: bold; font-size: 1.2rem; color: var(--primary); display: flex; align-items: center; gap: 10px; }
         
-        .stat-card h4 { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.45rem; margin-top: 0; }
-        .stat-number { font-size: 2rem; font-weight: 700; color: var(--primary-blue); margin: 0; }
-
-        /* ============ FORMS ============ */
-        label { font-size: 0.9rem; color: var(--text-muted); font-weight: 500; }
-        input, textarea {
-            width: 100%;
-            margin-top: 0.2rem;
-            margin-bottom: 0.7rem;
-            border-radius: 10px;
-            border: 1px solid rgba(148, 163, 184, 0.7);
-            padding: 0.52rem 0.65rem;
-            font-size: 0.9rem;
-        }
-        textarea { min-height: 100px; }
-
-        /* ============ TABLES ============ */
-        .applications-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 1.2rem;
-        }
-        .applications-table th, .applications-table td {
-            padding: 0.6rem 0.8rem;
-            border: 1px solid var(--border-color);
-            text-align: left;
-            font-size: 0.9rem;
-        }
-        .applications-table th { background-color: #e5e7eb; }
-        body.dark .applications-table th { background-color: #020617; }
-
-        .status-shortlisted { background-color: #dcfce7; color: #166534; font-weight: 600; }
-        .clickable-name { color: var(--primary-blue); cursor: pointer; text-decoration: underline; font-weight: 600; }
-        .btn-delete { background-color: #dc2626; color: white; border: none; border-radius: 999px; padding: 0.25rem 0.6rem; cursor: pointer; }
-
-        /* ============ MODAL ============ */
-        .modal-backdrop {
-            display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.7); z-index: 2000;
-        }
-        .modal-content {
-            display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: var(--bg-surface); padding: 2rem; border-radius: 16px;
-            width: 95%; max-width: 760px; max-height: 85vh; overflow-y: auto; z-index: 2001;
-        }
-        body.modal-open .modal-backdrop, body.modal-open .modal-content { display: block; }
+        .layout { max-width: 1200px; margin: 2rem auto; display: grid; grid-template-columns: 250px 1fr; gap: 2rem; padding: 0 1rem; }
         
-        .modal-close { position: absolute; top: 15px; right: 20px; font-size: 1.5rem; cursor: pointer; }
-        .modal-content h3 { color: var(--primary-blue); border-bottom: 1px solid var(--border-color); padding-bottom: 5px; margin-top: 1.5rem; }
-        .skill-list, .question-list { margin-left: 1.2rem; }
-
-        .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; margin: 1rem 0; border-bottom: 1px dashed var(--border-color); padding-bottom: 1rem; }
-        .btn-filter { background: var(--bg-surface-alt); border: 1px solid var(--border-color); padding: 0.3rem 0.9rem; border-radius: 999px; cursor: pointer; }
-        .btn-filter.active { background: var(--primary-blue); color: white; }
+        .card { background: var(--surface); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .card h2 { margin-top: 0; color: var(--primary); font-size: 1.25rem; }
+        
+        .btn { background: var(--primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; }
+        .btn:hover { opacity: 0.9; }
+        .btn-sec { background: transparent; border: 1px solid var(--border); color: var(--text); }
+        .btn-del { background: #ef4444; color: white; padding: 0.2rem 0.6rem; font-size: 0.8rem; }
+        
+        input, textarea, select { width: 100%; padding: 0.5rem; margin: 0.5rem 0 1rem; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); box-sizing: border-box; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: var(--bg); font-weight: 600; }
+        
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 100; }
+        .modal.open { display: flex; }
+        .modal-content { background: var(--surface); padding: 2rem; border-radius: 12px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; position: relative; }
+        .close { position: absolute; top: 1rem; right: 1rem; font-size: 1.5rem; cursor: pointer; }
+        
+        .status-badge { padding: 0.25rem 0.5rem; border-radius: 999px; font-size: 0.85rem; font-weight: 500; }
+        .status-Shortlisted { background: #dcfce7; color: #166534; }
+        .status-Pending { background: #f1f5f9; color: #475569; }
+        .status-Rejected { background: #fee2e2; color: #991b1b; }
+        
+        .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+        .stat-box { background: var(--bg); padding: 1rem; border-radius: 8px; text-align: center; }
+        .stat-num { font-size: 1.5rem; font-weight: bold; color: var(--primary); }
     </style>
 </head>
 <body>
 
-    <header class="header">
-        <nav class="navbar">
-            <a href="index.html" class="nav-brand">
-                <img src="vn.jpg" alt="VN Logo"> VN Infra Reality
-            </a>
-            <div class="nav-links">
-                <button id="theme-toggle" class="nav-link">🌙 Dark</button>
-                <a href="index.html" class="nav-link">Back to Portal</a>
-            </div>
-        </nav>
-    </header>
-
-    <div class="layout">
-        <aside class="sidebar">
-            <div class="sidebar-title">Recruiter Panel</div>
-            <div class="sidebar-sub">AI-Powered Dashboard</div>
-            <nav class="sidebar-nav">
-                <a href="#section-overview">📊 Overview</a>
-                <a href="#section-scanner">🧠 AI Scanner</a>
-                <a href="#section-applications">📁 Applications</a>
-                <a href="#section-jobs">📌 Job Postings</a>
-            </nav>
-        </aside>
-
-        <main class="page-container">
-            <section class="card" id="section-overview">
-                <h2>At-a-Glance</h2>
-                <div class="stats-container">
-                    <div class="stat-card"><h4>Total Applications</h4><p class="stat-number" id="stat-total-apps">0</p></div>
-                    <div class="stat-card"><h4>Shortlisted</h4><p class="stat-number" id="stat-total-shortlisted">0</p></div>
-                    <div class="stat-card"><h4>Avg Score</h4><p class="stat-number" id="stat-avg-score">0%</p></div>
-                </div>
-            </section>
-
-            <section class="card" id="section-scanner">
-                <h2>AI Resume Scanner</h2>
-                <form id="scan-form">
-                    <label>Upload Resume (PDF):</label>
-                    <input type="file" id="resume-file" accept=".pdf" required>
-                    <label>Job Description:</label>
-                    <textarea id="jd-text" placeholder="Paste JD here..." required></textarea>
-                    <button type="submit" class="btn">Scan Now</button>
-                </form>
-                <div id="results" style="margin-top:1rem;"></div>
-            </section>
-
-            <section class="card" id="section-applications">
-                <h2>Applications</h2>
-                <button id="load-apps-button" class="btn btn-secondary">Refresh List</button>
-                
-                <div class="filter-bar">
-                    <span>Filter:</span>
-                    <button class="btn-filter active" data-filter="All">All</button>
-                    <button class="btn-filter" data-filter="Shortlisted">Shortlisted</button>
-                    <button class="btn-filter" data-filter="Pending">Pending</button>
-                    <button class="btn-filter" data-filter="Rejected">Rejected</button>
-                </div>
-
-                <div style="overflow-x: auto;">
-                    <table class="applications-table">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Job</th>
-                                <th>Score</th>
-                                <th>Status</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="application-list-body"></tbody>
-                    </table>
-                </div>
-            </section>
-            
-            <section class="card" id="section-jobs">
-                <h2>Post New Job</h2>
-                <form id="add-job-form">
-                    <input type="text" id="job-title-input" placeholder="Job Title" required>
-                    <textarea id="job-description-input" placeholder="Job Description" required></textarea>
-                    <button type="submit" class="btn">Add Job</button>
-                </form>
-                <div id="job-list-container" style="margin-top:1rem;">
-                    <ul id="job-list"></ul>
-                </div>
-            </section>
-        </main>
+<div class="header">
+    <div class="brand">VN Infra Reality</div>
+    <div>
+        <button class="btn btn-sec" id="theme-toggle">Toggle Dark Mode</button>
+        <a href="index.html" class="btn btn-sec" style="text-decoration:none; margin-left:10px;">Logout</a>
     </div>
-    
-    <div class="modal-backdrop" id="modal-backdrop"></div>
-    <div class="modal-content" id="details-modal">
-        <span class="modal-close" id="modal-close-button">&times;</span>
-        <h2 id="modal-name">Candidate Details</h2>
-        <div id="modal-summary"></div>
+</div>
+
+<div class="layout">
+    <aside>
+        <div class="card">
+            <h3>Menu</h3>
+            <p><a href="#overview" style="text-decoration:none; color:var(--text);">📊 Overview</a></p>
+            <p><a href="#apps" style="text-decoration:none; color:var(--text);">📁 Applications</a></p>
+            <p><a href="#jobs" style="text-decoration:none; color:var(--text);">📌 Manage Jobs</a></p>
+        </div>
+    </aside>
+
+    <main>
+        <div id="overview" class="card">
+            <h2>Overview</h2>
+            <div class="stats">
+                <div class="stat-box">Total Apps<div class="stat-num" id="stat-total">0</div></div>
+                <div class="stat-box">Shortlisted<div class="stat-num" id="stat-short">0</div></div>
+                <div class="stat-box">Avg Score<div class="stat-num" id="stat-avg">0%</div></div>
+            </div>
+        </div>
+
+        <div id="apps" class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h2>Applications</h2>
+                <button class="btn btn-sec" onclick="loadData()">Refresh</button>
+            </div>
+            <table>
+                <thead>
+                    <tr><th>Name</th><th>Job</th><th>Score</th><th>Status</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="app-table"></tbody>
+            </table>
+        </div>
+
+        <div id="jobs" class="card">
+            <h2>Post a Job</h2>
+            <form onsubmit="addJob(event)">
+                <input id="job-title" placeholder="Job Title (e.g. Site Engineer)" required>
+                <textarea id="job-desc" placeholder="Job Description..." required></textarea>
+                <button class="btn">Post Job</button>
+            </form>
+        </div>
+    </main>
+</div>
+
+<div class="modal" id="detail-modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <h2 id="m-name">Candidate Name</h2>
+        <p id="m-summary"></p>
         
-        <h3>Update Status</h3>
+        <h3>Status</h3>
         <div style="display:flex; gap:10px;">
-            <select id="status-select">
+            <select id="m-status">
                 <option value="Pending">Pending</option>
                 <option value="Shortlisted">Shortlisted</option>
                 <option value="Interviewing">Interviewing</option>
                 <option value="Rejected">Rejected</option>
-                <option value="Hired">Hired</option>
             </select>
-            <button id="btn-update-status" class="btn btn-secondary">Update</button>
+            <button class="btn" onclick="updateStatus()">Update</button>
         </div>
 
-        <h3>Recruiter Notes</h3>
-        <textarea id="modal-notes" placeholder="Private notes..."></textarea>
-        <button id="btn-save-note" class="btn btn-secondary">Save Note</button>
+        <h3>Notes</h3>
+        <textarea id="m-notes" placeholder="Recruiter notes..."></textarea>
+        <button class="btn btn-sec" onclick="updateNotes()">Save Note</button>
 
         <h3>Matching Skills</h3>
-        <ul class="skill-list" id="modal-matching-skills"></ul>
-
+        <ul id="m-matching"></ul>
         <h3>Missing Skills</h3>
-        <ul class="skill-list" id="modal-missing-skills"></ul>
-
-        <h3>AI Interview Questions</h3>
-        <ol class="question-list" id="modal-interview-questions"></ol>
+        <ul id="m-missing"></ul>
+        <h3>Interview Questions</h3>
+        <ul id="m-questions"></ul>
     </div>
+</div>
 
-    <script>
-        const API_URL = 'https://vn-infra-protal-1.onrender.com'; 
-        // const API_URL = 'http://127.0.0.1:5000'; // Use this if running locally
+<script>
+    const API = "https://vn-infra-protal-1.onrender.com"; // UPDATE IF DEPLOYED
+    let currentId = null;
 
-        let applicationsData = [];
-        let currentAppId = null;
+    async function loadData() {
+        // 1. Get Analytics
+        const ana = await fetch(`${API}/get-analytics`).then(r => r.json());
+        document.getElementById('stat-total').innerText = ana.total_apps;
+        document.getElementById('stat-short').innerText = ana.total_shortlisted;
+        document.getElementById('stat-avg').innerText = ana.avg_score + '%';
 
-        // --- Utils ---
-        function safeList(val) {
-            if (Array.isArray(val)) return val;
-            return [];
+        // 2. Get Apps
+        const res = await fetch(`${API}/get-applications`);
+        const data = await res.json();
+        const tbody = document.getElementById('app-table');
+        tbody.innerHTML = '';
+
+        (data.applications || []).forEach(app => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="color:var(--primary); cursor:pointer; font-weight:bold;" 
+                    onclick='openModal(${JSON.stringify(app).replace(/'/g, "&#39;")})'>
+                    ${app.name}
+                </td>
+                <td>${app.jobTitle || 'N/A'}</td>
+                <td>${app.score}%</td>
+                <td><span class="status-badge status-${app.status}">${app.status}</span></td>
+                <td><button class="btn btn-del" onclick="deleteApp('${app.filename}')">Delete</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function openModal(app) {
+        currentId = app.id;
+        document.getElementById('m-name').innerText = `${app.name} (${app.score}%)`;
+        document.getElementById('m-summary').innerText = app.summary || 'No summary available.';
+        document.getElementById('m-status').value = app.status;
+        document.getElementById('m-notes').value = app.notes || '';
+
+        const renderList = (id, arr) => {
+            const el = document.getElementById(id);
+            el.innerHTML = '';
+            if(!arr || arr.length===0) el.innerHTML = '<li>None</li>';
+            else arr.forEach(i => el.innerHTML += `<li>${i}</li>`);
         }
 
-        // --- Modal Logic ---
-        const modal = document.getElementById('details-modal');
-        const backdrop = document.getElementById('modal-backdrop');
-        const closeBtn = document.getElementById('modal-close-button');
+        renderList('m-matching', app.matchingSkills);
+        renderList('m-missing', app.missingSkills);
+        renderList('m-questions', app.interviewQuestions);
 
-        function openModal() { document.body.classList.add('modal-open'); }
-        function closeModal() { document.body.classList.remove('modal-open'); }
-        closeBtn.onclick = closeModal;
-        backdrop.onclick = closeModal;
+        document.getElementById('detail-modal').classList.add('open');
+    }
 
-        // --- Show Details ---
-        function showDetails(app) {
-            currentAppId = app.id;
-            document.getElementById('modal-name').textContent = `${app.name} (${app.score}%)`;
-            document.getElementById('modal-summary').innerHTML = `<p>${app.summary || 'No summary.'}</p>`;
-            document.getElementById('status-select').value = app.status;
-            document.getElementById('modal-notes').value = app.notes || '';
+    function closeModal() {
+        document.getElementById('detail-modal').classList.remove('open');
+    }
 
-            // Render Lists (Backend now guarantees these are arrays)
-            const renderList = (id, list) => {
-                const el = document.getElementById(id);
-                el.innerHTML = '';
-                if (list && list.length > 0) {
-                    list.forEach(item => el.innerHTML += `<li>${item}</li>`);
-                } else {
-                    el.innerHTML = '<li>None detected.</li>';
-                }
-            };
+    async function updateStatus() {
+        const status = document.getElementById('m-status').value;
+        await fetch(`${API}/update-status`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ id: currentId, status })
+        });
+        alert('Status Updated');
+        loadData();
+    }
 
-            renderList('modal-matching-skills', safeList(app.matchingSkills));
-            renderList('modal-missing-skills', safeList(app.missingSkills));
-            renderList('modal-interview-questions', safeList(app.interviewQuestions));
+    async function updateNotes() {
+        const notes = document.getElementById('m-notes').value;
+        await fetch(`${API}/update-notes`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ id: currentId, notes })
+        });
+        alert('Notes Saved');
+    }
 
-            openModal();
-        }
+    async function deleteApp(filename) {
+        if(!confirm('Delete this application?')) return;
+        await fetch(`${API}/delete-application/${filename}`, { method:'DELETE' });
+        loadData();
+    }
 
-        // --- Load Data ---
-        async function loadApplications() {
-            try {
-                const res = await fetch(`${API_URL}/get-applications`);
-                const data = await res.json();
-                applicationsData = data.applications || [];
-                renderTable(applicationsData);
-            } catch (e) {
-                console.error(e);
-                document.getElementById('application-list-body').innerHTML = '<tr><td colspan="6">Error loading data.</td></tr>';
-            }
-        }
+    async function addJob(e) {
+        e.preventDefault();
+        const title = document.getElementById('job-title').value;
+        const desc = document.getElementById('job-desc').value;
+        await fetch(`${API}/add-job`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ title, description: desc })
+        });
+        alert('Job Posted!');
+        e.target.reset();
+    }
 
-        function renderTable(apps) {
-            const tbody = document.getElementById('application-list-body');
-            tbody.innerHTML = '';
-            if (apps.length === 0) tbody.innerHTML = '<tr><td colspan="6">No applications found.</td></tr>';
+    // Theme Toggle
+    document.getElementById('theme-toggle').onclick = () => {
+        document.body.classList.toggle('dark');
+    };
 
-            apps.forEach(app => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td><span class="clickable-name" onclick='showDetails(${JSON.stringify(app).replace(/'/g, "&#39;")})'>${app.name}</span></td>
-                    <td>${app.email}</td>
-                    <td>${app.jobTitle || 'N/A'}</td>
-                    <td><b>${app.score}%</b></td>
-                    <td class="${app.status === 'Shortlisted' ? 'status-shortlisted' : ''}">${app.status}</td>
-                    <td><button class="btn-delete" onclick="deleteApp('${app.filename}')">Delete</button></td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-
-        // --- Actions ---
-        async function deleteApp(filename) {
-            if(!confirm('Delete this application?')) return;
-            await fetch(`${API_URL}/delete-application/${filename}`, { method: 'DELETE' });
-            loadApplications();
-            loadAnalytics();
-        }
-
-        document.getElementById('btn-update-status').onclick = async () => {
-            const status = document.getElementById('status-select').value;
-            await fetch(`${API_URL}/update-status`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ id: currentAppId, status })
-            });
-            loadApplications();
-            loadAnalytics();
-            closeModal();
-        };
-
-        document.getElementById('btn-save-note').onclick = async () => {
-            const notes = document.getElementById('modal-notes').value;
-            await fetch(`${API_URL}/update-notes`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ id: currentAppId, notes })
-            });
-            alert('Note saved');
-        };
-
-        // --- Jobs ---
-        async function loadJobs() {
-            const res = await fetch(`${API_URL}/get-jobs`);
-            const data = await res.json();
-            const list = document.getElementById('job-list');
-            list.innerHTML = '';
-            (data.jobs || []).forEach(j => {
-                list.innerHTML += `<li><b>${j.title}</b>: ${j.description.substring(0,50)}...</li>`;
-            });
-        }
-
-        document.getElementById('add-job-form').onsubmit = async (e) => {
-            e.preventDefault();
-            const title = document.getElementById('job-title-input').value;
-            const description = document.getElementById('job-description-input').value;
-            await fetch(`${API_URL}/add-job`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ title, description })
-            });
-            document.getElementById('add-job-form').reset();
-            loadJobs();
-        };
-
-        // --- Analytics ---
-        async function loadAnalytics() {
-            const res = await fetch(`${API_URL}/get-analytics`);
-            const data = await res.json();
-            document.getElementById('stat-total-apps').textContent = data.total_apps;
-            document.getElementById('stat-total-shortlisted').textContent = data.total_shortlisted;
-            document.getElementById('stat-avg-score').textContent = data.avg_score + '%';
-        }
-
-        // --- Init ---
-        document.getElementById('load-apps-button').onclick = loadApplications;
-        
-        // Filter Logic
-        document.querySelector('.filter-bar').onclick = (e) => {
-            if(!e.target.classList.contains('btn-filter')) return;
-            document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
-            e.target.classList.add('active');
-            const filter = e.target.dataset.filter;
-            if (filter === 'All') renderTable(applicationsData);
-            else renderTable(applicationsData.filter(a => a.status === filter));
-        };
-
-        // Theme Toggle
-        document.getElementById('theme-toggle').onclick = () => {
-            document.body.classList.toggle('dark');
-        };
-
-        // Start
-        loadApplications();
-        loadJobs();
-        loadAnalytics();
-    </script>
+    // Initial Load
+    loadData();
+</script>
 </body>
 </html>
