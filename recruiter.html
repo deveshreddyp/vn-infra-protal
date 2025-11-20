@@ -7,53 +7,317 @@
     <link rel="stylesheet" href="style.css">
     
     <style>
-        /* (Styles are unchanged) */
-        .applications-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
-        .applications-table th, .applications-table td { padding: 0.8rem 1rem; border: 1px solid var(--border-color); text-align: left; vertical-align: middle; }
-        .applications-table th { background-color: #f8f9fa; }
-        .applications-table td { font-size: 0.95rem; }
-        .status-shortlisted { color: #155724; font-weight: 700; background-color: #d4edda; }
-        .status-pending { color: #555; }
-        .status-interviewing { background-color: #fff3cd; color: #664d03; font-weight: 700;}
-        .status-rejected { background-color: #f8d7da; color: #58151c; font-weight: 700;}
-        .status-hired { background-color: #cfe2ff; color: #052c65; font-weight: 700;}
-        .btn-delete { background-color: #dc3545; color: white; padding: 0.3rem 0.6rem; font-size: 0.8rem; border: none; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; }
-        .btn-delete:hover { background-color: #c82333; }
-        #notification-badge { display: none; background-color: var(--accent-orange); color: white; font-size: 0.9rem; font-weight: 700; padding: 2px 9px; border-radius: 50%; margin-left: 10px; vertical-align: middle; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(242, 140, 40, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(242, 140, 40, 0); } 100% { box-shadow: 0 0 0 0 rgba(242, 140, 40, 0); } }
-        .clickable-name { color: var(--primary-blue); font-weight: 600; text-decoration: underline; cursor: pointer; }
-        .clickable-name:hover { color: var(--accent-orange); }
-        .modal-backdrop { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); z-index: 2000; opacity: 0; transition: opacity 0.3s ease; }
-        .modal-content { display: none; position: fixed; top: 50%; left: 50%; background-color: var(--light-color); padding: 2.5rem; border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); width: 90%; max-width: 650px; max-height: 80vh; overflow-y: auto; z-index: 2001; opacity: 0; transform: translate(-50%, -45%); transition: all 0.3s ease; text-align: left; }
-        .modal-close { position: absolute; top: 10px; right: 20px; font-size: 2rem; font-weight: bold; color: #aaa; cursor: pointer; }
-        .modal-close:hover { color: var(--dark-color); }
-        body.modal-open .modal-backdrop { display: block; opacity: 1; }
-        body.modal-open .modal-content { display: block; opacity: 1; transform: translate(-50%, -50%); }
-        .modal-content h2 { color: var(--primary-blue); margin-bottom: 1rem; border: none; }
-        .modal-content h3 { font-family: var(--font-heading); color: var(--primary-blue); font-size: 1.2rem; margin-top: 1.5rem; margin-bottom: 0.5rem; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-        .modal-content .skill-list, .modal-content .question-list { list-style-type: disc; margin-left: 20px; padding-left: 5px; }
-        .modal-content .question-list { list-style-type: decimal; }
-        .modal-content .skill-list li, .modal-content .question-list li { font-size: 0.95rem; margin-bottom: 5px; }
-        .action-form { display: flex; gap: 10px; align-items: center; margin-top: 1rem; }
-        .action-form select, .action-form textarea { flex-grow: 1; margin-top: 0; }
-        .action-form button { width: auto; margin-top: 0; font-size: 0.9rem; align-self: flex-start; }
-        #modal-notes { height: 80px; resize: vertical; }
-        #note-save-status { font-size: 0.85rem; color: green; margin-left: 10px; visibility: hidden; }
-        .filter-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 1rem; border-bottom: 2px solid var(--border-color); padding-bottom: 1rem; }
-        .filter-bar .btn-filter { width: auto; margin-top: 0; padding: 0.5rem 1rem; font-size: 0.9rem; background-color: var(--light-color); color: var(--primary-blue); border: 1px solid var(--border-color); cursor: pointer; transition: all 0.2s ease; }
-        .filter-bar .btn-filter:hover { background-color: #f0f2f5; border-color: #ccc; }
-        .filter-bar .btn-filter.active { background-color: var(--primary-blue); color: var(--light-color); border-color: var(--primary-blue); }
-        .job-list { list-style-type: none; padding: 0; margin-top: 1rem; }
-        .job-list-item { background-color: #f8f9fa; padding: 1rem; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 0.75rem; }
-        .job-list-item h4 { font-family: var(--font-heading); color: var(--primary-blue); font-size: 1.1rem; margin-bottom: 0.25rem; }
-        .job-list-item p { font-size: 0.9rem; color: #555; margin-bottom: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        #job-form-status { font-weight: 600; }
-        .status-success { color: green; }
-        .status-error { color: var(--accent-orange); }
-        .stats-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 1rem; }
-        .stat-card { background-color: #f8f9fa; border: 1px solid var(--border-color); border-left: 5px solid var(--primary-blue); border-radius: 8px; padding: 1.5rem; text-align: center; }
-        .stat-card h4 { font-family: var(--font-heading); font-size: 1.1rem; color: #555; margin-bottom: 0.5rem; font-weight: 600; }
-        .stat-card .stat-number { font-size: 2.5rem; font-weight: 700; color: var(--primary-blue); }
+        /* TABLE LAYOUT / ALIGNMENT */
+        .applications-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1.5rem;
+        }
+        .applications-table th,
+        .applications-table td {
+            padding: 0.8rem 1rem;
+            border: 1px solid var(--border-color);
+            text-align: left;
+            vertical-align: middle;
+            font-size: 0.95rem;
+        }
+        .applications-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        /* STATUS COLORS */
+        .status-shortlisted {
+            color: #155724;
+            font-weight: 700;
+            background-color: #d4edda;
+        }
+        .status-pending {
+            color: #555;
+        }
+        .status-interviewing {
+            background-color: #fff3cd;
+            color: #664d03;
+            font-weight: 700;
+        }
+        .status-rejected {
+            background-color: #f8d7da;
+            color: #58151c;
+            font-weight: 700;
+        }
+        .status-hired {
+            background-color: #cfe2ff;
+            color: #052c65;
+            font-weight: 700;
+        }
+
+        .btn-delete {
+            background-color: #dc3545;
+            color: white;
+            padding: 0.3rem 0.6rem;
+            font-size: 0.8rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .btn-delete:hover {
+            background-color: #c82333;
+        }
+
+        #notification-badge {
+            display: none;
+            background-color: var(--accent-orange);
+            color: white;
+            font-size: 0.9rem;
+            font-weight: 700;
+            padding: 2px 9px;
+            border-radius: 50%;
+            margin-left: 10px;
+            vertical-align: middle;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(242, 140, 40, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(242, 140, 40, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(242, 140, 40, 0); }
+        }
+
+        .clickable-name {
+            color: var(--primary-blue);
+            font-weight: 600;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+        .clickable-name:hover {
+            color: var(--accent-orange);
+        }
+
+        /* MODAL LAYOUT / ALIGNMENT */
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .modal-content {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            background-color: var(--light-color);
+            padding: 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            width: 95%;
+            max-width: 720px;
+            max-height: 80vh;
+            overflow-y: auto;
+            z-index: 2001;
+            opacity: 0;
+            transform: translate(-50%, -45%);
+            transition: all 0.3s ease;
+            text-align: left;
+            box-sizing: border-box;
+        }
+        .modal-close {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 2rem;
+            font-weight: bold;
+            color: #aaa;
+            cursor: pointer;
+        }
+        .modal-close:hover {
+            color: var(--dark-color);
+        }
+        body.modal-open .modal-backdrop {
+            display: block;
+            opacity: 1;
+        }
+        body.modal-open .modal-content {
+            display: block;
+            opacity: 1;
+            transform: translate(-50%, -50%);
+        }
+        .modal-content h2 {
+            color: var(--primary-blue);
+            margin-bottom: 0.75rem;
+            border: none;
+        }
+        .modal-content h3 {
+            font-family: var(--font-heading);
+            color: var(--primary-blue);
+            font-size: 1.1rem;
+            margin-top: 1.25rem;
+            margin-bottom: 0.4rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+        .modal-content .summary {
+            margin-bottom: 0.75rem;
+        }
+        .modal-content .skill-list,
+        .modal-content .question-list {
+            margin-left: 1.25rem;
+            padding-left: 0.25rem;
+        }
+        .modal-content .skill-list {
+            list-style-type: disc;
+        }
+        .modal-content .question-list {
+            list-style-type: decimal;
+        }
+        .modal-content .skill-list li,
+        .modal-content .question-list li {
+            font-size: 0.95rem;
+            margin-bottom: 4px;
+        }
+
+        .action-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: flex-start;
+            margin-top: 0.75rem;
+        }
+        .action-form select,
+        .action-form textarea {
+            flex-grow: 1;
+            margin-top: 0;
+        }
+        .action-form button {
+            width: auto;
+            margin-top: 0;
+            font-size: 0.9rem;
+            align-self: flex-start;
+        }
+
+        #modal-notes {
+            height: 80px;
+            resize: vertical;
+        }
+
+        #note-save-status {
+            font-size: 0.85rem;
+            color: green;
+            margin-left: 10px;
+            visibility: hidden;
+        }
+
+        /* FILTER BAR */
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 1rem;
+            align-items: center;
+        }
+        .filter-bar .btn-filter {
+            width: auto;
+            margin-top: 0;
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            background-color: var(--light-color);
+            color: var(--primary-blue);
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .filter-bar .btn-filter:hover {
+            background-color: #f0f2f5;
+            border-color: #ccc;
+        }
+        .filter-bar .btn-filter.active {
+            background-color: var(--primary-blue);
+            color: var(--light-color);
+            border-color: var(--primary-blue);
+        }
+
+        /* JOB LIST */
+        .job-list {
+            list-style-type: none;
+            padding: 0;
+            margin-top: 1rem;
+        }
+        .job-list-item {
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+        }
+        .job-list-item h4 {
+            font-family: var(--font-heading);
+            color: var(--primary-blue);
+            font-size: 1.1rem;
+            margin-bottom: 0.25rem;
+        }
+        .job-list-item p {
+            font-size: 0.9rem;
+            color: #555;
+            margin-bottom: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #job-form-status {
+            font-weight: 600;
+        }
+        .status-success {
+            color: green;
+        }
+        .status-error {
+            color: var(--accent-orange);
+        }
+
+        /* DASHBOARD STATS */
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+        .stat-card {
+            background-color: #f8f9fa;
+            border: 1px solid var(--border-color);
+            border-left: 5px solid var(--primary-blue);
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        .stat-card h4 {
+            font-family: var(--font-heading);
+            font-size: 1.1rem;
+            color: #555;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        .stat-card .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary-blue);
+        }
+
+        @media (max-width: 640px) {
+            .modal-content {
+                padding: 1.5rem;
+            }
+            .applications-table th,
+            .applications-table td {
+                padding: 0.5rem 0.6rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -156,6 +420,7 @@
         
     </main>
     
+    <!-- MODAL -->
     <div class="modal-backdrop" id="modal-backdrop"></div>
     <div class="modal-content" id="details-modal">
         <span class="modal-close" id="modal-close-button">&times;</span>
@@ -186,29 +451,44 @@
         <ol class="question-list" id="modal-interview-questions"></ol>
     </div>
 
+    <!-- SCAN FORM SCRIPT -->
     <script>
         const scanForm = document.getElementById('scan-form');
         const resultsDiv = document.getElementById('results');
+
         scanForm.addEventListener('submit', async function(event) {
             event.preventDefault(); 
             resultsDiv.innerHTML = "<p>Scanning... The AI is analyzing the documents...</p>";
+
             const resumeFile = document.getElementById('resume-file').files[0];
             const jdText = document.getElementById('jd-text').value;
+
             const formData = new FormData();
             formData.append('resume', resumeFile);
             formData.append('jobDescription', jdText);
+
             try {
                 // --- DEPLOYMENT URL ---
-                const response = await fetch('https://vn-infra-protal-1.onrender.com/scan-resume', { method: 'POST', body: formData });
+                const response = await fetch('https://vn-infra-protal-1.onrender.com/scan-resume', { 
+                    method: 'POST', 
+                    body: formData 
+                });
+
                 const data = await response.json();
-                if (!response.ok) { throw new Error(data.error || 'Network response was not ok'); }
+                if (!response.ok) { 
+                    throw new Error(data.error || 'Network response was not ok'); 
+                }
+
+                const safeMatching = Array.isArray(data.matchingSkills) ? data.matchingSkills : (data.matchingSkills || []);
+                const safeMissing = Array.isArray(data.missingSkills) ? data.missingSkills : (data.missingSkills || []);
+
                 resultsDiv.innerHTML = `
                     <h2>Match Score: ${data.matchScore}%</h2>
                     <p><strong>Candidate:</strong> ${data.candidateName}</p>
                     <p><strong>Email:</strong> ${data.candidateEmail}</p>
                     <div class="summary"><strong>AI Summary:</strong><p>${data.summary}</p></div>
-                    <p><strong>Matching Skills:</strong> ${data.matchingSkills.join(', ')}</p>
-                    <p><strong>Missing Skills from JD:</strong> ${data.missingSkills.join(', ')}</p>
+                    <p><strong>Matching Skills:</strong> ${safeMatching.join(', ')}</p>
+                    <p><strong>Missing Skills from JD:</strong> ${safeMissing.join(', ')}</p>
                 `;
             } catch (error) {
                 console.error('Error:', error);
@@ -217,7 +497,23 @@
         });
     </script>
     
+    <!-- MAIN DASHBOARD SCRIPT -->
     <script>
+        // --- Helper to safely parse JSON OR accept arrays directly ---
+        function safeParseJSON(value, fallback) {
+            if (value == null || value === '') return fallback;
+            if (Array.isArray(value)) return value;
+            if (typeof value === 'string') {
+                try {
+                    return JSON.parse(value);
+                } catch (e) {
+                    console.warn('JSON parse error for value:', value, e);
+                    return fallback;
+                }
+            }
+            return fallback;
+        }
+
         // --- All elements ---
         const loadButton = document.getElementById('load-apps-button');
         const appListBody = document.getElementById('application-list-body');
@@ -231,7 +527,6 @@
         const noteInput = document.getElementById('modal-notes');
         const noteSaveStatus = document.getElementById('note-save-status');
         const filterBar = document.querySelector('.filter-bar');
-        const sortByScoreButton = document.getElementById('sort-by-score');
         const addJobForm = document.getElementById('add-job-form');
         const jobTitleInput = document.getElementById('job-title-input');
         const jobDescInput = document.getElementById('job-description-input');
@@ -253,21 +548,35 @@
         // --- Show Details ---
         function showDetails(app) {
             currentAppId = app.id; 
-            statusSelect.value = app.status; 
+            statusSelect.value = app.status || 'Pending'; 
             noteInput.value = app.notes || ''; 
             noteSaveStatus.style.visibility = 'hidden'; 
-            
-            const matchingSkills = JSON.parse(app.matchingSkills || '[]');
-            const missingSkills = JSON.parse(app.missingSkills || '[]');
-            const interviewQuestions = JSON.parse(app.interviewQuestions || '[]');
-            
+
+            // Safely get skills / questions (supports camelCase & snake_case)
+            const matchingSkills = safeParseJSON(
+                app.matchingSkills || app.matching_skills,
+                []
+            );
+            const missingSkills = safeParseJSON(
+                app.missingSkills || app.missing_skills,
+                []
+            );
+            const interviewQuestions = safeParseJSON(
+                app.interviewQuestions || app.interview_questions,
+                []
+            );
+
+            const summaryText = app.summary || app.aiSummary || 'No summary available.';
+
             document.getElementById('modal-name').textContent = `${app.name} (Score: ${app.score}%)`;
-            document.getElementById('modal-summary').innerHTML = `<p>${app.summary || 'No summary available.'}</p>`;
+            document.getElementById('modal-summary').innerHTML = `<p>${summaryText}</p>`;
             
             const matchingList = document.getElementById('modal-matching-skills');
             matchingList.innerHTML = ''; 
             if (matchingSkills.length > 0) {
-                matchingSkills.forEach(skill => { matchingList.innerHTML += `<li>${skill}</li>`; });
+                matchingSkills.forEach(skill => {
+                    matchingList.innerHTML += `<li>${skill}</li>`;
+                });
             } else {
                 matchingList.innerHTML = '<li>No matching skills found.</li>';
             }
@@ -275,7 +584,9 @@
             const missingList = document.getElementById('modal-missing-skills');
             missingList.innerHTML = ''; 
             if (missingSkills.length > 0) {
-                missingSkills.forEach(skill => { missingList.innerHTML += `<li>${skill}</li>`; });
+                missingSkills.forEach(skill => {
+                    missingList.innerHTML += `<li>${skill}</li>`;
+                });
             } else {
                 missingList.innerHTML = '<li>No missing skills found.</li>';
             }
@@ -283,9 +594,9 @@
             const questionList = document.getElementById('modal-interview-questions');
             questionList.innerHTML = '';
             if (interviewQuestions && interviewQuestions.length > 0) {
-                 interviewQuestions.forEach(question => {
+                interviewQuestions.forEach(question => {
                     questionList.innerHTML += `<li>${question}</li>`;
-                 });
+                });
             } else {
                 questionList.innerHTML = '<li>No specific questions generated.</li>';
             }
@@ -321,9 +632,9 @@
             }
             
             if (currentSort === 'score') {
-                filteredApps.sort((a, b) => b.score - a.score);
+                filteredApps.sort((a, b) => (b.score || 0) - (a.score || 0));
             } else {
-                filteredApps.sort((a, b) => b.id - a.id);
+                filteredApps.sort((a, b) => (b.id || 0) - (a.id || 0));
             }
 
             if (filteredApps.length === 0) {
@@ -334,8 +645,11 @@
             filteredApps.forEach((app) => {
                 const row = document.createElement('tr');
                 const statusClassMap = {
-                    'Shortlisted': 'status-shortlisted', 'Pending': 'status-pending',
-                    'Interviewing': 'status-interviewing', 'Rejected': 'status-rejected', 'Hired': 'status-hired'
+                    'Shortlisted': 'status-shortlisted',
+                    'Pending': 'status-pending',
+                    'Interviewing': 'status-interviewing',
+                    'Rejected': 'status-rejected',
+                    'Hired': 'status-hired'
                 };
                 const statusClass = statusClassMap[app.status] || 'status-pending';
                 
@@ -356,16 +670,17 @@
                 row.appendChild(emailCell);
 
                 const jobCell = document.createElement('td');
-                jobCell.textContent = app.jobTitle || 'N/A';
+                jobCell.textContent = app.jobTitle || app.job_title || 'N/A';
                 row.appendChild(jobCell);
                 
                 const scoreCell = document.createElement('td');
-                scoreCell.innerHTML = `<b>${app.score}%</b>`;
+                const scoreVal = app.score != null ? app.score : 0;
+                scoreCell.innerHTML = `<b>${scoreVal}%</b>`;
                 row.appendChild(scoreCell);
                 
                 const statusCell = document.createElement('td');
                 statusCell.className = statusClass;
-                statusCell.textContent = app.status;
+                statusCell.textContent = app.status || 'Pending';
                 row.appendChild(statusCell);
                 
                 const downloadCell = document.createElement('td');
@@ -399,7 +714,7 @@
                 const data = await response.json();
                 if (!response.ok) { throw new Error(data.error || 'Could not load applications'); }
                 
-                applicationsData = data.applications; 
+                applicationsData = data.applications || []; 
                 displayApplications(); 
             } catch (error) {
                 console.error('Error loading applications:', error);
@@ -473,21 +788,24 @@
         // --- Filter/Sort Event Listeners ---
         filterBar.addEventListener('click', (e) => {
             if (e.target.classList.contains('btn-filter')) {
-                filterBar.querySelectorAll('.btn-filter[data-filter]').forEach(btn => {
-                    btn.classList.remove('active');
-                });
-                
+                // Filter buttons
+                if (e.target.dataset.filter) {
+                    filterBar.querySelectorAll('.btn-filter[data-filter]').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    currentFilter = e.target.dataset.filter;
+                    e.target.classList.add('active');
+                }
+
+                // Sort toggle button
                 if (e.target.id === 'sort-by-score') {
                     currentSort = 'score';
                     e.target.textContent = 'Sort by Date (Newest)';
                     e.target.id = 'sort-by-date';
                 } else if (e.target.id === 'sort-by-date') {
                     currentSort = 'default';
-                    e.target.textContent = 'Sort by Score (High to Low)';
+                    e.target.textContent = 'Score (High to Low)';
                     e.target.id = 'sort-by-score';
-                } else {
-                    currentFilter = e.target.dataset.filter;
-                    e.target.classList.add('active');
                 }
                 
                 displayApplications();
@@ -502,9 +820,9 @@
                 const data = await response.json();
                 if (!response.ok) { throw new Error(data.error); }
                 
-                document.getElementById('stat-total-apps').textContent = data.total_apps;
-                document.getElementById('stat-total-shortlisted').textContent = data.total_shortlisted;
-                document.getElementById('stat-avg-score').textContent = `${data.avg_score}%`;
+                document.getElementById('stat-total-apps').textContent = data.total_apps ?? 0;
+                document.getElementById('stat-total-shortlisted').textContent = data.total_shortlisted ?? 0;
+                document.getElementById('stat-avg-score').textContent = `${data.avg_score ?? 0}%`;
                 
             } catch (error) {
                 console.error('Error loading analytics:', error);
@@ -521,7 +839,7 @@
                 if (!response.ok) { throw new Error(data.error); }
                 
                 jobList.innerHTML = ''; 
-                if (data.jobs.length === 0) {
+                if (!data.jobs || data.jobs.length === 0) {
                     jobList.innerHTML = '<p>No jobs posted yet.</p>';
                     return;
                 }
@@ -577,7 +895,7 @@
                 // --- DEPLOYMENT URL ---
                 const response = await fetch('https://vn-infra-protal-1.onrender.com/get-applications');
                 const data = await response.json();
-                if (response.ok && data.applications.length > 0) {
+                if (response.ok && data.applications && data.applications.length > 0) {
                     badge.textContent = data.applications.length;
                     badge.style.display = 'inline-block';
                 }
